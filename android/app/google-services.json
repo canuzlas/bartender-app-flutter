@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "527109492721",
+    "project_id": "bartender-9acb1",
+    "storage_bucket": "bartender-9acb1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:527109492721:android:a9f64f5d8f3fe793d8be50",
+        "android_client_info": {
+          "package_name": "com.example.bartender"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "527109492721-4o8fift2drrvpjrg7vj57ubufd4t6d3h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.bartender",
+            "certificate_hash": "904d161d78904f1e7dae2916db84b7a96dc81ebb"
+          }
+        },
+        {
+          "client_id": "527109492721-hnv8132nu50l80be9r2e53ft1tnj32fp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBO0ARO2Acxus9a99FsSOQ0t2saC3jsgus"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "527109492721-hnv8132nu50l80be9r2e53ft1tnj32fp.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "527109492721-isuplbtns9q5rmr7980qti0u02ggogsd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.bartender"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
