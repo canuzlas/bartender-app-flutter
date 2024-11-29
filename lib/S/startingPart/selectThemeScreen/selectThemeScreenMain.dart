@@ -1,5 +1,4 @@
 
-
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +16,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
   Widget build(BuildContext context) {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
+    final sss = ref.watch(sharedPreferences);
     return Scaffold(
       backgroundColor: const  Color.fromRGBO(249, 247, 247,1), 
       body: SafeArea(child: Column(
@@ -37,6 +37,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
               
                GestureDetector(
                 onTap: () => {
+                  sss.setBool("darkTheme", true),
                   ref.read(darkTheme.notifier).state = true
                 },
                 child: Image.asset("assets/openingPageDT.png",width: 150,height: 150,)),
@@ -61,6 +62,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
                 children: [
                  GestureDetector(
                   onTap: () => {
+                     sss.setBool("darkTheme", false),
                      ref.read(darkTheme.notifier).state = false
                   },
                   child: Image.asset("assets/openingPageLT.png",width: 150,height: 150,)),
