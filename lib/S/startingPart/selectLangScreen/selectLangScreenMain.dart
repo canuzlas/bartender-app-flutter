@@ -17,6 +17,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectlangscreenmain> {
   Widget build(BuildContext context) {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
+    final sss = ref.watch(sharedPreferences);
     return Scaffold(
       backgroundColor: darkThemeMain? Color.fromRGBO(23, 21, 59,1) : const  Color.fromRGBO(249, 247, 247,1), 
       body: SafeArea(child: Column(
@@ -33,6 +34,9 @@ class _SelectthemescreenmainState extends ConsumerState<Selectlangscreenmain> {
               
                GestureDetector(
                 onTap: () => {
+
+                  
+                  sss.setString("lang", "tr"),
                   ref.read(lang.notifier).state = "tr"
                 },
                 child: Image.asset("assets/trLang.png",width: 250,height: 250,)),
@@ -53,6 +57,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectlangscreenmain> {
                 children: [
                  GestureDetector(
                   onTap: () => {
+                     sss.setString("lang", "en"),
                      ref.read(lang.notifier).state = "en"
                   },
                   child: Image.asset("assets/enLang.png",width: 170,height: 170,)),
@@ -66,7 +71,10 @@ class _SelectthemescreenmainState extends ConsumerState<Selectlangscreenmain> {
          Expanded(
            flex: 1,
            child: GestureDetector(
-             onTap: () => Navigator.pushNamed(context,'/selectLangScreen'),
+             onTap: () async{
+              await sss.setBool("set", true);
+              Navigator.pushNamed(context,'/loginScreen');
+             },
              child: Container(
                   color:  darkThemeMain? Color.fromRGBO(23, 21, 59,1) : const  Color.fromRGBO(249, 247, 247,1), 
                  alignment: Alignment.center,

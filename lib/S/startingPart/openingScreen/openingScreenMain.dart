@@ -1,7 +1,11 @@
+
 import 'package:bartender/S/startingPart/openingScreen/osController.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+var set;
 
 class Openingscreenmain extends ConsumerStatefulWidget {
   const Openingscreenmain({super.key});
@@ -13,12 +17,11 @@ class Openingscreenmain extends ConsumerStatefulWidget {
 class _OpeningscreenmainState extends ConsumerState<Openingscreenmain> {
 
   OsController osController = OsController();
+
+
   @override
-  void initState() {
-    osController.setTimeout(
-      () => {
-      Navigator.popAndPushNamed(context, '/selectThemeScreen')
-      }, 2000);
+  void initState () {
+    loadGeneralSettings(ref,context);
     super.initState();
   }
 
