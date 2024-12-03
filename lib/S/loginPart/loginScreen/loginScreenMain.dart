@@ -23,8 +23,7 @@ class _LoginscreenmainState extends ConsumerState<Loginscreenmain> {
   Widget build(BuildContext context) {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
-    final sss = ref.watch(sharedPreferences);
-    sss.setBool("set",false);
+
     return Scaffold(
        backgroundColor: darkThemeMain? Color.fromRGBO(23, 21, 59,1) : const  Color.fromRGBO(249, 247, 247,1), 
        body: SafeArea(

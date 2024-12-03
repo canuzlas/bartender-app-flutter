@@ -1,7 +1,5 @@
 
 import 'dart:async';
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,6 +35,7 @@ loadGeneralSettings(ref,context) async {
   bool? sssDarkTheme =  sss.getBool("darkTheme");
   String? sssLang =  sss.getString("lang");
   bool? set = sss.getBool("set");
+  //setting language and theme
   ref.read(darkTheme.notifier).state = sssDarkTheme == true ? true:false;
   ref.read(lang.notifier).state = sssLang == "tr" ? "tr":"en";
 
