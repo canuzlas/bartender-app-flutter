@@ -3,9 +3,6 @@ import 'package:bartender/S/startingPart/openingScreen/osController.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-var set;
 
 class Openingscreenmain extends ConsumerStatefulWidget {
   const Openingscreenmain({super.key});

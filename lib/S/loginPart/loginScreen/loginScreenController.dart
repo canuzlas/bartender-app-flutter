@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:bartender/S/loginPart/loginScreen/loginScreenModel.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -24,8 +25,10 @@ class Loginscreencontroller{
       );
 
       // Once signed in, return the UserCredential
-     UserCredential user = await FirebaseAuth.instance.signInWithCredential(credential);
-     sss.setString("user",jsonEncode(user));
+     UserCredential resultUser = await FirebaseAuth.instance.signInWithCredential(credential);
+     GoogleUser loggedUser =  GoogleUser(resultUser.user?.displayName,resultUser.user?.email,resultUser.user?.photoURL,resultUser.user?.uid);
+     //saving user on the local storege
+     sss.setString("user",jsonEncode(loggedUser.toObject()));
       return googleUser;
     } else {
       return false;
