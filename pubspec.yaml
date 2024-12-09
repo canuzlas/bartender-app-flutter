@@ -46,6 +46,7 @@ dependencies:
   neon_widgets: ^2.0.0
   shared_preferences: ^2.3.3
   google_nav_bar: ^5.0.7
+  story_view: ^0.16.5
 
 
 dev_dependencies:
