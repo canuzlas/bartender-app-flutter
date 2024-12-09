@@ -1,3 +1,4 @@
+import 'package:bartender/S/mainPart/homeScreen/homeScreenMain.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,10 +18,7 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.w600);
   static const List<Widget> _widgetOptions = <Widget>[
-    Text(
-      'Home',
-      style: optionStyle,
-    ),
+    Homescreenmain(),
     Text(
       'Likes',
       style: optionStyle,
