@@ -1,4 +1,5 @@
 import 'package:bartender/S/mainPart/homeScreen/homeScreenMain.dart';
+import 'package:bartender/S/mainPart/profileScreen/profileScreenMain.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,10 +28,7 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
       'Search',
       style: optionStyle,
     ),
-    Text(
-      'Profile',
-      style: optionStyle,
-    ),
+    Profilescreenmain()
   ];
 
 

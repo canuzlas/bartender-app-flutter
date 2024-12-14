@@ -23,216 +23,303 @@ class _HomescreenmainState extends ConsumerState<Homescreenmain> {
     return Scaffold(
       body:
       //main container
-       Container(
-        margin: const EdgeInsets.all(
-          10,
-        ),
-        child:
-        // main column
-         Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-          // will be listViewBuilder. will get data from database 
-          Expanded(
-            flex: 1,
-            child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(     
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-              GestureDetector(
-                onTap: () {
-                  // dont forget that side !!!!!! pass the story owner info
-                  Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
-                },
-                child: const Padding(
-                  padding: EdgeInsets.only(right: 6),
-                  child: SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: CircleAvatar(
-                      backgroundImage: AssetImage("assets/openingPageLT.png"),
+       SafeArea(
+         child: Container(
+          margin: const EdgeInsets.all(
+            10,
+          ),
+          child:
+          // main column
+           Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+            // will be listViewBuilder. will get data from database 
+            Expanded(
+              flex: 1,
+              child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(     
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                GestureDetector(
+                  onTap: () {
+                    // dont forget that side !!!!!! pass the story owner info
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircleAvatar(
+                        backgroundImage: AssetImage("assets/openingPageLT.png"),
+                      ),
                     ),
                   ),
                 ),
-              ),
-               GestureDetector(
-                onTap: () {
-                  // dont forget that side !!!!!! pass the story owner info
-                  Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
-                },
-                child: const Padding(
-                  padding: EdgeInsets.only(right: 6),
-                  child: SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: CircleAvatar(
-                      backgroundImage: AssetImage("assets/openingPageLT.png"),
+                GestureDetector(
+                  onTap: () {
+                    // dont forget that side !!!!!! pass the story owner info
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircleAvatar(
+                        backgroundImage: AssetImage("assets/openingPageLT.png"),
+                      ),
                     ),
                   ),
                 ),
-              ),
-             
-            ],),
-          ),),
-         
-          Expanded(
-            flex: 8,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: SingleChildScrollView(child: Column(children: [
-                //post container
-               Container(
-                 margin:const EdgeInsets.all(5),
-                 child:  Column(
-                   mainAxisAlignment: MainAxisAlignment.start,
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     // user photo, uname and more button
-                    Row(
-                       mainAxisAlignment: MainAxisAlignment.start,
-                       children: [
-                         const Padding(
-                       padding: EdgeInsets.only(right: 6),
-                       child: SizedBox(
-                         width: 40,
-                         height: 40,
-                         child: CircleAvatar(
-                           backgroundImage: AssetImage("assets/openingPageDT.png"),
-                         ),
-                       ),
-                     ), Text("Can Uzlaş",style: TextStyle(color:darkThemeMain? Colors.white:Colors.black),),
-                     const Spacer(),
-                     IconButton(
-                      iconSize: 25,
-                      color: darkThemeMain? Colors.white:Colors.black,
-                      icon: const Icon(Icons.more_horiz),
-                      onPressed: () {
-                        return null;
-                      },
+                GestureDetector(
+                  onTap: () {
+                    // dont forget that side !!!!!! pass the story owner info
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircleAvatar(
+                        backgroundImage: AssetImage("assets/openingPageLT.png"),
+                      ),
                     ),
-                       ],
-                     ),
-                     // post data
-                     const SizedBox(
-                      height: 220,
-                      child: Placeholder(),
-                     ),
-
-                     // bottom buttons area
-                     Row(
-
-                      children: [
-                         IconButton(
-                          iconSize: 22,
-                          color: darkThemeMain? Colors.white:Colors.black,
-                          icon: const Icon(CupertinoIcons.heart),
-                          onPressed: () {
-                            return null;
-                          },
-                        ),
-                         IconButton(
-                          iconSize: 22,
-                          color: darkThemeMain? Colors.white:Colors.black,
-                          icon: const Icon(Icons.insert_comment_outlined),
-                          onPressed: () {
-                            return null;
-                          },
-                        ),
-                        Spacer(),
-                        IconButton(
-                          iconSize: 22,
-                          color: darkThemeMain? Colors.white:Colors.black,
-                          icon: const Icon(Icons.send_outlined),
-                          onPressed: () {
-                            return null;
-                          },
-                        ),
-                      ],
-                     )
-                   ],
-                 ),
-               ),
-                Container(
-                 margin:const EdgeInsets.all(5),
-                 child:  Column(
-                   mainAxisAlignment: MainAxisAlignment.start,
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     // user photo, uname and more button
-                    Row(
-                       mainAxisAlignment: MainAxisAlignment.start,
-                       children: [
-                         const Padding(
-                       padding: EdgeInsets.only(right: 6),
-                       child: SizedBox(
-                         width: 40,
-                         height: 40,
-                         child: CircleAvatar(
-                           backgroundImage: AssetImage("assets/openingPageDT.png"),
-                         ),
-                       ),
-                     ), Text("Can Uzlaş",style: TextStyle(color:darkThemeMain? Colors.white:Colors.black),),
-                     const Spacer(),
-                     IconButton(
-                      iconSize: 25,
-                      color: darkThemeMain? Colors.white:Colors.black,
-                      icon: const Icon(Icons.more_horiz),
-                      onPressed: () {
-                        return null;
-                      },
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    // dont forget that side !!!!!! pass the story owner info
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircleAvatar(
+                        backgroundImage: AssetImage("assets/openingPageLT.png"),
+                      ),
                     ),
-                       ],
-                     ),
-                     // post data
-                     const SizedBox(
-                      height: 220,
-                      child: Placeholder(),
-                     ),
-
-                     // bottom buttons area
-                     Row(
-
-                      children: [
-                         IconButton(
-                          iconSize: 22,
-                          color: darkThemeMain? Colors.white:Colors.black,
-                          icon: const Icon(CupertinoIcons.heart),
-                          onPressed: () {
-                            return null;
-                          },
-                        ),
-                         IconButton(
-                          iconSize: 22,
-                          color: darkThemeMain? Colors.white:Colors.black,
-                          icon: const Icon(Icons.insert_comment_outlined),
-                          onPressed: () {
-                            return null;
-                          },
-                        ),
-                        Spacer(),
-                        IconButton(
-                          iconSize: 22,
-                          color: darkThemeMain? Colors.white:Colors.black,
-                          icon: const Icon(Icons.send_outlined),
-                          onPressed: () {
-                            return null;
-                          },
-                        ),
-                      ],
-                     )
-                   ],
-                 ),
-               ),
- ],),),
-            )),
-          //post container, that too will be listViewBuilder
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    // dont forget that side !!!!!! pass the story owner info
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircleAvatar(
+                        backgroundImage: AssetImage("assets/openingPageLT.png"),
+                      ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    // dont forget that side !!!!!! pass the story owner info
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircleAvatar(
+                        backgroundImage: AssetImage("assets/openingPageLT.png"),
+                      ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    // dont forget that side !!!!!! pass the story owner info
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => MoreStories(storyOwner: "can uzlas",)));
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircleAvatar(
+                        backgroundImage: AssetImage("assets/openingPageLT.png"),
+                      ),
+                    ),
+                  ),
+                ),
+                
+              ],),
+            ),),
+           
+            Expanded(
+              flex: 8,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: SingleChildScrollView(child: Column(children: [
+                  //post container
+                 Container(
+                   margin:const EdgeInsets.all(5),
+                   child:  Column(
+                     mainAxisAlignment: MainAxisAlignment.start,
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       // user photo, uname and more button
+                      Row(
+                         mainAxisAlignment: MainAxisAlignment.start,
+                         children: [
+                           const Padding(
+                         padding: EdgeInsets.only(right: 6),
+                         child: SizedBox(
+                           width: 40,
+                           height: 40,
+                           child: CircleAvatar(
+                             backgroundImage: AssetImage("assets/openingPageDT.png"),
+                           ),
+                         ),
+                       ), Text("Can Uzlaş",style: TextStyle(color:darkThemeMain? Colors.white:Colors.black),),
+                       const Spacer(),
+                       IconButton(
+                        iconSize: 25,
+                        color: darkThemeMain? Colors.white:Colors.black,
+                        icon: const Icon(Icons.more_horiz),
+                        onPressed: () {
+                          return null;
+                        },
+                      ),
+                         ],
+                       ),
+                       // post data
+                       const SizedBox(
+                        height: 220,
+                        child: Placeholder(),
+                       ),
          
-        ],)
-      ),
+                       // bottom buttons area
+                       Row(
+         
+                        children: [
+                           IconButton(
+                            iconSize: 22,
+                            color: darkThemeMain? Colors.white:Colors.black,
+                            icon: const Icon(CupertinoIcons.heart),
+                            onPressed: () {
+                              return null;
+                            },
+                          ),
+                           IconButton(
+                            iconSize: 22,
+                            color: darkThemeMain? Colors.white:Colors.black,
+                            icon: const Icon(Icons.insert_comment_outlined),
+                            onPressed: () {
+                              return null;
+                            },
+                          ),
+                          Spacer(),
+                          IconButton(
+                            iconSize: 22,
+                            color: darkThemeMain? Colors.white:Colors.black,
+                            icon: const Icon(Icons.send_outlined),
+                            onPressed: () {
+                              return null;
+                            },
+                          ),
+                        ],
+                       )
+                     ],
+                   ),
+                 ),
+                  Container(
+                   margin:const EdgeInsets.all(5),
+                   child:  Column(
+                     mainAxisAlignment: MainAxisAlignment.start,
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       // user photo, uname and more button
+                      Row(
+                         mainAxisAlignment: MainAxisAlignment.start,
+                         children: [
+                           const Padding(
+                         padding: EdgeInsets.only(right: 6),
+                         child: SizedBox(
+                           width: 40,
+                           height: 40,
+                           child: CircleAvatar(
+                             backgroundImage: AssetImage("assets/openingPageDT.png"),
+                           ),
+                         ),
+                       ), Text("Can Uzlaş",style: TextStyle(color:darkThemeMain? Colors.white:Colors.black),),
+                       const Spacer(),
+                       IconButton(
+                        iconSize: 25,
+                        color: darkThemeMain? Colors.white:Colors.black,
+                        icon: const Icon(Icons.more_horiz),
+                        onPressed: () {
+                          return null;
+                        },
+                      ),
+                         ],
+                       ),
+                       // post data
+                       const SizedBox(
+                        height: 220,
+                        child: Placeholder(),
+                       ),
+         
+                       // bottom buttons area
+                       Row(
+         
+                        children: [
+                           IconButton(
+                            iconSize: 22,
+                            color: darkThemeMain? Colors.white:Colors.black,
+                            icon: const Icon(CupertinoIcons.heart),
+                            onPressed: () {
+                              return null;
+                            },
+                          ),
+                           IconButton(
+                            iconSize: 22,
+                            color: darkThemeMain? Colors.white:Colors.black,
+                            icon: const Icon(Icons.insert_comment_outlined),
+                            onPressed: () {
+                              return null;
+                            },
+                          ),
+                          Spacer(),
+                          IconButton(
+                            iconSize: 22,
+                            color: darkThemeMain? Colors.white:Colors.black,
+                            icon: const Icon(Icons.send_outlined),
+                            onPressed: () {
+                              return null;
+                            },
+                          ),
+                        ],
+                       )
+                     ],
+                   ),
+                 ),
+          ],),),
+              )),
+            //post container, that too will be listViewBuilder
+           
+          ],)
+               ),
+       ),
     );
   }
 }

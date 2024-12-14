@@ -10,7 +10,7 @@ final sharedPreferences = Provider<SharedPreferences>((_) => throw Unimplemented
 //theme state
 final darkTheme = StateProvider((ref) => true);
 //lang state
-final lang = StateProvider((ref)=> "en");
+final lang = StateProvider((ref)=> "tr");
 final themeChangeState = Provider.autoDispose((ref) {
 
 
