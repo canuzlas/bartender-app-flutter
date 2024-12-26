@@ -10,8 +10,8 @@ class GeneratedRouter {
   static Route? router(RouteSettings settings) {
     switch (settings.name) {
       case '/':
-      return MaterialPageRoute(builder: (context) =>  Botnavigation());
-        //return MaterialPageRoute(builder: (context) => const Openingscreenmain());
+      //return MaterialPageRoute(builder: (context) =>  Botnavigation());
+        return MaterialPageRoute(builder: (context) => const Openingscreenmain());
         //return MaterialPageRoute(builder: (context) => const Loginscreenmain());
       case '/selectThemeScreen':
         return MaterialPageRoute(builder: (context) => const Selectthemescreenmain());
