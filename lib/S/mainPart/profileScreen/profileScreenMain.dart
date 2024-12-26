@@ -95,7 +95,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                         Text("Can Uzlaş"),
                         //bio
                         Text(
-                          "asdasd sadasdasdasdsasdasdasdasdasdadasdadasdasdsadasds asdadasd",
+                          "asdasd    sadasdasdasdsasdasdasdasdasdadasdadasdasdsadasds asdadasd",
                           
                            softWrap: true,
                            style: const TextStyle(
