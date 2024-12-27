@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ffi';
 import 'package:bartender/S/loginPart/loginScreen/loginScreenModel.dart';
 import 'package:bartender/firestore/firestore.dart';
 import 'package:bartender/mainSettings.dart';
@@ -14,7 +13,7 @@ class Loginscreencontroller{
   signInWithGoogle() async {
     SharedPreferences sss = await getSheredPrefs();
 
-
+    // productta kalkacak unutma
     await GoogleSignIn().signOut();
     final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
   
@@ -31,21 +30,19 @@ class Loginscreencontroller{
 
       // Once signed in, return the UserCredential
      UserCredential resultUser = await FirebaseAuth.instance.signInWithCredential(credential);
+     //create model object for logged user
      GoogleUser loggedUser =  GoogleUser(resultUser.user?.displayName,resultUser.user?.email,resultUser.user?.photoURL,resultUser.user?.uid);
      //saving user on the local storege
      sss.setString("user",jsonEncode(loggedUser.toObject()));
      //saving user to firestore
-
-     var userContains = await fbs.collection("users").doc(resultUser.user?.uid).get();
+     var fbsuser = await Fbfs().getDataByDocumentId("users", resultUser.user?.uid);
      
-      if(userContains.data()?.length == null){
-          await fbs.collection("users").doc(resultUser.user?.uid).set(loggedUser.toObject()).then(( doc) =>
-          print('**************************flutter toast will come'));
-      }else{
-        print("***************************var");
+      if(fbsuser?.length == null){
+        bool result = await Fbfs().setDataWithDocumentId("users", resultUser.user?.uid , loggedUser.toObject());
+        result ? print("fluttertoast gelecek. login data set edildi"):print("ft gelecek login data set basarisiz");
       }
 
-      return googleUser;
+      return true;
     } else {
       return false;
     }
