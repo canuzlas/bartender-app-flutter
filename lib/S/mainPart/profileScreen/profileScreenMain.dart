@@ -117,7 +117,11 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             langMain == "tr"
                                 ? "profili düzenle"
                                 : "edit profile",
-                            style: TextStyle(color: Colors.orangeAccent),
+                            style: TextStyle(
+                              color: darkThemeMain
+                                  ? Colors.orangeAccent
+                                  : Colors.deepOrange,
+                            ),
                           ),
                         )
                       ],
@@ -161,21 +165,33 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                       children: [
                         Container(
                           child: GridView.count(
-                            padding: EdgeInsets.zero,
-                            crossAxisCount: 3,
-                            children: Colors.primaries.map((color) {
-                              return Container(color: color, height: 150.0);
-                            }).toList(),
-                          ),
+                              padding: EdgeInsets.zero,
+                              crossAxisCount: 3,
+                              children: [
+                                for (var i = 0; i < 10; i++)
+                                  Container(
+                                    padding: EdgeInsets.all(1),
+                                    height: 150.0,
+                                    color: Colors.transparent,
+                                    child: Image.network(
+                                        "https://picsum.photos/300/300"),
+                                  ),
+                              ]),
                         ),
                         Container(
                           child: GridView.count(
-                            padding: EdgeInsets.zero,
-                            crossAxisCount: 3,
-                            children: Colors.primaries.map((color) {
-                              return Container(color: color, height: 150.0);
-                            }).toList(),
-                          ),
+                              padding: EdgeInsets.zero,
+                              crossAxisCount: 3,
+                              children: [
+                                for (var i = 0; i < 10; i++)
+                                  Container(
+                                    padding: EdgeInsets.all(1),
+                                    height: 150.0,
+                                    color: Colors.transparent,
+                                    child: Image.network(
+                                        "https://picsum.photos/300/300"),
+                                  ),
+                              ]),
                         ),
                       ],
                     ),
