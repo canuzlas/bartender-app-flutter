@@ -20,361 +20,151 @@ class _HomescreenmainState extends ConsumerState<Homescreenmain> {
     final langMain = ref.watch(lang);
 
     return Scaffold(
-      body:
-          //main container
-          SafeArea(
-        child: Container(
-            margin: const EdgeInsets.all(
-              10,
-            ),
-            child:
-                // main column
-                Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // will be listViewBuilder. will get data from database
-                Expanded(
-                  flex: 1,
+      backgroundColor: darkThemeMain
+          ? const Color.fromRGBO(23, 21, 59, 1)
+          : const Color.fromRGBO(249, 247, 247, 1),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Story section
+              Expanded(
+                flex: 1,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: List.generate(7, (index) {
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => MoreStories(
+                                    storyOwner: "can uzlas",
+                                  )));
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: CircleAvatar(
+                              backgroundImage:
+                                  AssetImage("assets/openingPageLT.png"),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ),
+              // Post section
+              Expanded(
+                flex: 8,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 10),
                   child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            // dont forget that side !!!!!! pass the story owner info
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) => MoreStories(
-                                      storyOwner: "can uzlas",
-                                    )));
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    AssetImage("assets/openingPageLT.png"),
+                    child: Column(
+                      children: List.generate(4, (index) {
+                        return Container(
+                          margin: const EdgeInsets.all(5),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // User info and more button
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 6),
+                                    child: SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                            "https://picsum.photos/300/300"),
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    "Can Uzlaş",
+                                    style: TextStyle(
+                                        color: darkThemeMain
+                                            ? Colors.white
+                                            : Colors.black),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    iconSize: 25,
+                                    color: darkThemeMain
+                                        ? Colors.white
+                                        : Colors.black,
+                                    icon: const Icon(Icons.more_horiz),
+                                    onPressed: () {
+                                      return null;
+                                    },
+                                  ),
+                                ],
                               ),
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // dont forget that side !!!!!! pass the story owner info
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) => MoreStories(
-                                      storyOwner: "can uzlas",
-                                    )));
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    AssetImage("assets/openingPageLT.png"),
+                              // Post image
+                              SizedBox(
+                                height: 220,
+                                child: Image.network(
+                                    alignment: Alignment.center,
+                                    "https://picsum.photos/300/200"),
                               ),
-                            ),
+                              // Bottom buttons
+                              Row(
+                                children: [
+                                  IconButton(
+                                    iconSize: 22,
+                                    color: darkThemeMain
+                                        ? Colors.white
+                                        : Colors.black,
+                                    icon: const Icon(CupertinoIcons.heart),
+                                    onPressed: () {
+                                      return null;
+                                    },
+                                  ),
+                                  IconButton(
+                                    iconSize: 22,
+                                    color: darkThemeMain
+                                        ? Colors.white
+                                        : Colors.black,
+                                    icon: const Icon(
+                                        Icons.insert_comment_outlined),
+                                    onPressed: () {
+                                      return null;
+                                    },
+                                  ),
+                                  Spacer(),
+                                  IconButton(
+                                    iconSize: 22,
+                                    color: darkThemeMain
+                                        ? Colors.white
+                                        : Colors.black,
+                                    icon: const Icon(Icons.send_outlined),
+                                    onPressed: () {
+                                      return null;
+                                    },
+                                  ),
+                                ],
+                              )
+                            ],
                           ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // dont forget that side !!!!!! pass the story owner info
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) => MoreStories(
-                                      storyOwner: "can uzlas",
-                                    )));
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    AssetImage("assets/openingPageLT.png"),
-                              ),
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // dont forget that side !!!!!! pass the story owner info
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) => MoreStories(
-                                      storyOwner: "can uzlas",
-                                    )));
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    AssetImage("assets/openingPageLT.png"),
-                              ),
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // dont forget that side !!!!!! pass the story owner info
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) => MoreStories(
-                                      storyOwner: "can uzlas",
-                                    )));
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    AssetImage("assets/openingPageLT.png"),
-                              ),
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // dont forget that side !!!!!! pass the story owner info
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) => MoreStories(
-                                      storyOwner: "can uzlas",
-                                    )));
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    AssetImage("assets/openingPageLT.png"),
-                              ),
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // dont forget that side !!!!!! pass the story owner info
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) => MoreStories(
-                                      storyOwner: "can uzlas",
-                                    )));
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    AssetImage("assets/openingPageLT.png"),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                        );
+                      }),
                     ),
                   ),
                 ),
-
-                Expanded(
-                    flex: 8,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            //post container
-                            Container(
-                              margin: const EdgeInsets.all(5),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // user photo, uname and more button
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      const Padding(
-                                        padding: EdgeInsets.only(right: 6),
-                                        child: SizedBox(
-                                          width: 40,
-                                          height: 40,
-                                          child: CircleAvatar(
-                                            backgroundImage: AssetImage(
-                                                "assets/openingPageDT.png"),
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        "Can Uzlaş",
-                                        style: TextStyle(
-                                            color: darkThemeMain
-                                                ? Colors.white
-                                                : Colors.black),
-                                      ),
-                                      const Spacer(),
-                                      IconButton(
-                                        iconSize: 25,
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
-                                        icon: const Icon(Icons.more_horiz),
-                                        onPressed: () {
-                                          return null;
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  // post data
-                                  const SizedBox(
-                                    height: 220,
-                                    child: Placeholder(),
-                                  ),
-
-                                  // bottom buttons area
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        iconSize: 22,
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
-                                        icon: const Icon(CupertinoIcons.heart),
-                                        onPressed: () {
-                                          return null;
-                                        },
-                                      ),
-                                      IconButton(
-                                        iconSize: 22,
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
-                                        icon: const Icon(
-                                            Icons.insert_comment_outlined),
-                                        onPressed: () {
-                                          return null;
-                                        },
-                                      ),
-                                      Spacer(),
-                                      IconButton(
-                                        iconSize: 22,
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
-                                        icon: const Icon(Icons.send_outlined),
-                                        onPressed: () {
-                                          return null;
-                                        },
-                                      ),
-                                    ],
-                                  )
-                                ],
-                              ),
-                            ),
-                            Container(
-                              margin: const EdgeInsets.all(5),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // user photo, uname and more button
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      const Padding(
-                                        padding: EdgeInsets.only(right: 6),
-                                        child: SizedBox(
-                                          width: 40,
-                                          height: 40,
-                                          child: CircleAvatar(
-                                            backgroundImage: AssetImage(
-                                                "assets/openingPageDT.png"),
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        "Can Uzlaş",
-                                        style: TextStyle(
-                                            color: darkThemeMain
-                                                ? Colors.white
-                                                : Colors.black),
-                                      ),
-                                      const Spacer(),
-                                      IconButton(
-                                        iconSize: 25,
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
-                                        icon: const Icon(Icons.more_horiz),
-                                        onPressed: () {
-                                          return null;
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  // post data
-                                  const SizedBox(
-                                    height: 220,
-                                    child: Placeholder(),
-                                  ),
-
-                                  // bottom buttons area
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        iconSize: 22,
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
-                                        icon: const Icon(CupertinoIcons.heart),
-                                        onPressed: () {
-                                          return null;
-                                        },
-                                      ),
-                                      IconButton(
-                                        iconSize: 22,
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
-                                        icon: const Icon(
-                                            Icons.insert_comment_outlined),
-                                        onPressed: () {
-                                          return null;
-                                        },
-                                      ),
-                                      Spacer(),
-                                      IconButton(
-                                        iconSize: 22,
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
-                                        icon: const Icon(Icons.send_outlined),
-                                        onPressed: () {
-                                          return null;
-                                        },
-                                      ),
-                                    ],
-                                  )
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )),
-                //post container, that too will be listViewBuilder
-              ],
-            )),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
