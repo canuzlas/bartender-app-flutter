@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 class GoogleUser {
   final String? displayName;
   final String? email;
@@ -8,11 +10,7 @@ class GoogleUser {
 
   factory GoogleUser.fromMap(Map<String, dynamic> map) {
     return GoogleUser(
-      map['displayname'],
-      map['email'],
-      map['photoURL'],
-      map['uid'],
-    );
+        map['displayname'], map['email'], map['photoURL'], map['uid']);
   }
 
   toObject() {
@@ -20,7 +18,8 @@ class GoogleUser {
       "displayname": displayName,
       "email": email,
       "photoURL": photoURL,
-      "uid": uid
+      "uid": uid,
+      "followers": []
     };
   }
 

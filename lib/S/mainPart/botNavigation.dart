@@ -1,7 +1,7 @@
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenMain.dart';
-import 'package:bartender/S/mainPart/discoveryScreen/discoveryScreenMain.dart';
 import 'package:bartender/S/mainPart/homeScreen/homeScreenMain.dart';
 import 'package:bartender/S/mainPart/profileScreen/profileScreenMain.dart';
+import 'package:bartender/S/mainPart/discoverScreen/discoverScreenMain.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,9 +18,9 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
   int _selectedIndex = 0;
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.w600);
-  static List<Widget> _widgetOptions = <Widget>[
+  static final List<Widget> _widgetOptions = <Widget>[
     const Homescreenmain(),
-    Discoveryscreenmain(),
+    DiscoveryScreenMain(),
     AiChatScreenMain(),
     const Profilescreenmain()
   ];
