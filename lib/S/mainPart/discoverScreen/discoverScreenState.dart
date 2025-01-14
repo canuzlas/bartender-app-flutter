@@ -8,6 +8,9 @@ final tweetProvider = StreamProvider<List<Tweet>>((ref) {
       .orderBy('timestamp', descending: true) // Sort by timestamp descending
       .snapshots()
       .map((snapshot) {
-    return snapshot.docs.map((doc) => Tweet.fromDocument(doc)).toList();
+    return snapshot.docs
+        .map((doc) => Tweet.fromDocument(doc))
+        .toList()
+        .cast<Tweet>();
   });
 });

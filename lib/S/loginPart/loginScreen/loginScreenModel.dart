@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 class GoogleUser {
   final String? displayName;
   final String? email;

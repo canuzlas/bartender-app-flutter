@@ -17,99 +17,184 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
     final langMain = ref.watch(lang);
     final sss = ref.watch(sharedPreferences);
     return Scaffold(
-        backgroundColor: const Color.fromRGBO(249, 247, 247, 1),
-        body: SafeArea(
+      backgroundColor: darkThemeMain
+          ? const Color.fromRGBO(23, 21, 59, 1)
+          : const Color.fromRGBO(249, 247, 247, 1),
+      body: SafeArea(
+        child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                flex: 3,
+              SizedBox(height: 20),
+              Text(
+                langMain == "tr" ? "Tema Seçimi" : "Select Theme",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: darkThemeMain ? Colors.white : Colors.black,
+                ),
+              ),
+              SizedBox(height: 20),
+              GestureDetector(
+                onTap: () => {
+                  sss.setBool("darkTheme", true),
+                  ref.read(darkTheme.notifier).state = true
+                },
                 child: Container(
-                  color: const Color.fromRGBO(23, 21, 59, 1),
+                  margin: EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(23, 21, 59, 1),
+                    borderRadius: BorderRadius.circular(15.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
                   alignment: Alignment.center,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      GestureDetector(
-                          onTap: () => {
-                                sss.setBool("darkTheme", true),
-                                ref.read(darkTheme.notifier).state = true
-                              },
-                          child: Image.asset(
-                            "assets/openingPageDT.png",
-                            width: 150,
-                            height: 150,
-                          )),
-                      Text(langMain == "tr" ? "Koyu Tema" : "Dark Theme",
-                          style: const TextStyle(color: Colors.white)),
+                      Image.asset(
+                        "assets/openingPageDT.png",
+                        width: 150,
+                        height: 150,
+                      ),
+                      SizedBox(height: 10),
                       Text(
-                          darkThemeMain
-                              ? langMain == "tr"
-                                  ? "[SEÇİLEN]"
-                                  : "[CHOOSED]"
-                              : "",
-                          style: const TextStyle(
-                              color: Color.fromARGB(255, 205, 205, 6))),
+                        langMain == "tr" ? "Koyu Tema" : "Dark Theme",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        darkThemeMain
+                            ? langMain == "tr"
+                                ? "[SEÇİLEN]"
+                                : "[CHOSEN]"
+                            : "",
+                        style: const TextStyle(
+                          color: Color.fromARGB(255, 205, 205, 6),
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-              Expanded(
-                flex: 3,
+              GestureDetector(
+                onTap: () => {
+                  sss.setBool("darkTheme", false),
+                  ref.read(darkTheme.notifier).state = false
+                },
                 child: Container(
-                  color: const Color.fromRGBO(249, 247, 247, 1),
+                  margin: EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(249, 247, 247, 1),
+                    borderRadius: BorderRadius.circular(15.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
                   alignment: Alignment.center,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      GestureDetector(
-                          onTap: () => {
-                                sss.setBool("darkTheme", false),
-                                ref.read(darkTheme.notifier).state = false
-                              },
-                          child: Image.asset(
-                            "assets/openingPageLT.png",
-                            width: 150,
-                            height: 150,
-                          )),
+                      Image.asset(
+                        "assets/openingPageLT.png",
+                        width: 150,
+                        height: 150,
+                      ),
+                      SizedBox(height: 10),
                       Text(
                         langMain == "tr" ? "Açık Tema" : "Light Theme",
-                        style: TextStyle(color: Color.fromRGBO(23, 21, 59, 1)),
+                        style: TextStyle(
+                          color: Color.fromRGBO(23, 21, 59, 1),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                      SizedBox(height: 5),
                       Text(
-                          darkThemeMain
-                              ? ""
-                              : langMain == "tr"
-                                  ? "[SEÇİLEN]"
-                                  : "[CHOOSED]",
-                          style: const TextStyle(
-                              color: Color.fromARGB(255, 5, 126, 57))),
+                        darkThemeMain
+                            ? ""
+                            : langMain == "tr"
+                                ? "[SEÇİLEN]"
+                                : "[CHOSEN]",
+                        style: const TextStyle(
+                          color: Color.fromARGB(255, 5, 126, 57),
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () =>
-                      Navigator.pushNamed(context, '/selectLangScreen'),
-                  child: Container(
-                    color: const Color.fromRGBO(249, 247, 247, 1),
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          "assets/selectThemeNext.png",
-                          width: 70,
-                          height: 60,
-                        )
-                      ],
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/selectLangScreen'),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      "assets/selectThemeNext.png",
+                      width: 70,
+                      height: 60,
                     ),
-                  ),
+                    SizedBox(height: 10),
+                    Text(
+                      langMain == "tr" ? "Devam Et" : "Continue",
+                      style: TextStyle(
+                        color: darkThemeMain
+                            ? Colors.white
+                            : Color.fromRGBO(23, 21, 59, 1),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-              )
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Text(
+                      langMain == "tr"
+                          ? "Tema seçimi, uygulamanın görünümünü değiştirir."
+                          : "Theme selection changes the appearance of the app.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: darkThemeMain ? Colors.white70 : Colors.black87,
+                        fontSize: 14,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      langMain == "tr"
+                          ? "Devam etmek için bir tema seçin."
+                          : "Select a theme to continue.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: darkThemeMain ? Colors.white70 : Colors.black87,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-        ));
+        ),
+      ),
+    );
   }
 }

@@ -1,270 +1,246 @@
 import 'package:bartender/mainSettings.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:story_view/story_view.dart';
+import 'package:intl/intl.dart';
+import 'package:bartender/S/mainPart/discoverScreen/discoverScreenCommentsPage.dart';
+import 'package:bartender/S/mainPart/homeScreen/homeScreenController.dart';
 
-class Homescreenmain extends ConsumerStatefulWidget {
-  const Homescreenmain({super.key});
+final sortedTweetsProvider = StreamProvider.autoDispose<
+    List<QueryDocumentSnapshot<Map<String, dynamic>>>>((ref) {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return Stream.value([]);
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .snapshots()
+      .asyncMap((userDoc) async {
+    final following = (userDoc.data()?['following'] as List<dynamic>?) ?? [];
+    if (following.isEmpty) {
+      return <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    }
+    final snapshot = await FirebaseFirestore.instance
+        .collection('tweets')
+        .where('userId', whereIn: following)
+        .orderBy('timestamp', descending: true)
+        .get();
+    return snapshot.docs;
+  });
+});
+
+class HomeScreenMain extends ConsumerStatefulWidget {
+  const HomeScreenMain({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _HomescreenmainState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _HomeScreenMainState();
 }
 
-class _HomescreenmainState extends ConsumerState<Homescreenmain> {
-  final StoryController controller = StoryController();
+class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
+  final HomeScreenController _controller = HomeScreenController();
 
   @override
   Widget build(BuildContext context) {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
+    final sortedTweetsAsyncValue = ref.watch(sortedTweetsProvider);
 
     return Scaffold(
-      backgroundColor: darkThemeMain
-          ? const Color.fromRGBO(23, 21, 59, 1)
-          : const Color.fromRGBO(249, 247, 247, 1),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Story section
-              Expanded(
-                flex: 1,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: List.generate(7, (index) {
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (context) => MoreStories(
-                                    storyOwner: "can uzlas",
-                                  )));
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.only(right: 6),
-                          child: SizedBox(
-                            width: 60,
-                            height: 60,
-                            child: CircleAvatar(
-                              backgroundImage:
-                                  AssetImage("assets/openingPageLT.png"),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
-              // Post section
-              Expanded(
-                flex: 8,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: List.generate(4, (index) {
-                        return Container(
-                          margin: const EdgeInsets.all(5),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // User info and more button
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: EdgeInsets.only(right: 6),
-                                    child: SizedBox(
-                                      width: 40,
-                                      height: 40,
-                                      child: CircleAvatar(
-                                        backgroundImage: NetworkImage(
-                                            "https://picsum.photos/300/300"),
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    "Can Uzlaş",
-                                    style: TextStyle(
-                                        color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black),
-                                  ),
-                                  const Spacer(),
-                                  IconButton(
-                                    iconSize: 25,
-                                    color: darkThemeMain
-                                        ? Colors.white
-                                        : Colors.black,
-                                    icon: const Icon(Icons.more_horiz),
-                                    onPressed: () {
-                                      return null;
-                                    },
-                                  ),
-                                ],
-                              ),
-                              // Post image
-                              SizedBox(
-                                height: 220,
-                                child: Image.network(
-                                    alignment: Alignment.center,
-                                    "https://picsum.photos/300/200"),
-                              ),
-                              // Bottom buttons
-                              Row(
-                                children: [
-                                  IconButton(
-                                    iconSize: 22,
-                                    color: darkThemeMain
-                                        ? Colors.white
-                                        : Colors.black,
-                                    icon: const Icon(CupertinoIcons.heart),
-                                    onPressed: () {
-                                      return null;
-                                    },
-                                  ),
-                                  IconButton(
-                                    iconSize: 22,
-                                    color: darkThemeMain
-                                        ? Colors.white
-                                        : Colors.black,
-                                    icon: const Icon(
-                                        Icons.insert_comment_outlined),
-                                    onPressed: () {
-                                      return null;
-                                    },
-                                  ),
-                                  Spacer(),
-                                  IconButton(
-                                    iconSize: 22,
-                                    color: darkThemeMain
-                                        ? Colors.white
-                                        : Colors.black,
-                                    icon: const Icon(Icons.send_outlined),
-                                    onPressed: () {
-                                      return null;
-                                    },
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                        );
-                      }),
+        child: sortedTweetsAsyncValue.when(
+          data: (posts) {
+            if (posts.isEmpty) {
+              return Center(
+                child: AnimatedOpacity(
+                  opacity: 1.0,
+                  duration: Duration(seconds: 2),
+                  child: Text(
+                    langMain == "tr"
+                        ? 'Kimseyi takip etmiyorsunuz.'
+                        : 'You are not following anyone.',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: darkThemeMain ? Colors.white : Colors.black,
                     ),
                   ),
                 ),
+              );
+            }
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.refresh(sortedTweetsProvider);
+              },
+              child: ListView.builder(
+                itemCount: posts.length,
+                itemBuilder: (context, index) {
+                  final post = posts[index];
+                  final isLiked = (post['likedBy'] as List<dynamic>?)
+                          ?.contains(_controller.auth.currentUser?.uid) ??
+                      false;
+                  return Card(
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                    ),
+                    elevation: 5,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: NetworkImage(
+                                post['userPhotoURL'] ??
+                                    'https://picsum.photos/200'),
+                          ),
+                          title: Text(
+                            post['message'] ?? '',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Updated by: ${post['userName'] ?? 'Unknown'}',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          trailing: Text(
+                            _controller.formatTimestamp(post['timestamp']),
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.thumb_up),
+                                    color: isLiked ? Colors.blue : Colors.grey,
+                                    onPressed: () {
+                                      _controller.toggleLike(post.id, isLiked);
+                                    },
+                                  ),
+                                  Text(
+                                      '${(post['likedBy'] as List<dynamic>?)?.length ?? 0} likes'),
+                                ],
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.comment),
+                                color: Colors.grey,
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          CommentsPage(tweetId: post.id),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
+            );
+          },
+          loading: () => Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(child: Text('Error: $error')),
         ),
       ),
-    );
-  }
-}
-
-class MoreStories extends StatefulWidget {
-  // will be GoogleUser object
-  final String storyOwner;
-  MoreStories({Key? key, required this.storyOwner}) : super(key: key);
-  @override
-  _MoreStoriesState createState() => _MoreStoriesState();
-}
-
-class _MoreStoriesState extends State<MoreStories> {
-  final storyController = StoryController();
-
-  @override
-  void dispose() {
-    storyController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.storyOwner),
-      ),
-      body: StoryView(
-        storyItems: [
-          StoryItem.text(
-            title: "I guess you'd love to see more of our food. That's great.",
-            backgroundColor: Colors.blue,
-          ),
-          StoryItem.text(
-            title: "Nice!\n\nTap to continue.",
-            backgroundColor: Colors.red,
-            textStyle: TextStyle(
-              fontFamily: 'Dancing',
-              fontSize: 40,
-            ),
-          ),
-          StoryItem.pageImage(
-            url:
-                "https://image.ibb.co/cU4WGx/Omotuo-Groundnut-Soup-braperucci-com-1.jpg",
-            caption: Text(
-              "Still sampling",
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            controller: storyController,
-          ),
-          StoryItem.pageImage(
-              url: "https://media.giphy.com/media/5GoVLqeAOo6PK/giphy.gif",
-              caption: Text(
-                "Working with gifs",
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.white,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor:
+            darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              final TextEditingController _textController =
+                  TextEditingController();
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15.0),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              controller: storyController),
-          StoryItem.pageImage(
-            url: "https://media.giphy.com/media/XcA8krYsrEAYXKf4UQ/giphy.gif",
-            caption: Text(
-              "Hello, from the other side",
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            controller: storyController,
-          ),
-          StoryItem.pageImage(
-            url: "https://media.giphy.com/media/XcA8krYsrEAYXKf4UQ/giphy.gif",
-            caption: Text(
-              "Hello, from the other side2",
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            controller: storyController,
-          ),
-        ],
-        onStoryShow: (storyItem, index) {
-          print("Showing a story");
+                title: Text(
+                  langMain == "tr" ? 'Yeni Gönderi' : 'New Post',
+                  style: TextStyle(
+                    color: darkThemeMain ? Colors.white : Colors.black,
+                  ),
+                ),
+                content: TextField(
+                  controller: _textController,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: langMain == "tr"
+                        ? 'Neler oluyor?'
+                        : 'What\'s happening?',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      langMain == "tr" ? 'İptal' : 'Cancel',
+                      style: TextStyle(
+                          color: darkThemeMain
+                              ? Colors.orangeAccent
+                              : Colors.deepOrange),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (_textController.text.isNotEmpty) {
+                        final userId = _controller.auth.currentUser!.uid;
+                        final userName =
+                            _controller.auth.currentUser!.displayName;
+                        final userPhotoURL =
+                            _controller.auth.currentUser!.photoURL;
+                        FirebaseFirestore.instance.collection('tweets').add({
+                          'userId': userId,
+                          'userName': userName,
+                          'userPhotoURL': userPhotoURL,
+                          'message': _textController.text,
+                          'timestamp': Timestamp.now(),
+                          'likedBy': [],
+                        });
+                        Navigator.of(context).pop();
+                        ref.refresh(
+                            sortedTweetsProvider); // Refresh the provider
+                      }
+                    },
+                    icon: Icon(Icons.send, color: Colors.white),
+                    label: Text(
+                      langMain == "tr" ? 'Gönder' : 'Post',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: darkThemeMain
+                          ? Colors.orangeAccent
+                          : Colors.deepOrange,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
         },
-        onComplete: () {
-          print("Completed a cycle");
-        },
-        progressPosition: ProgressPosition.top,
-        repeat: false,
-        controller: storyController,
+        child: Icon(
+          Icons.add,
+          color: Colors.white,
+        ),
+        mini: true,
       ),
     );
   }

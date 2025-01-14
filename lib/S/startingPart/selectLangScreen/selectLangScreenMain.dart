@@ -1,5 +1,3 @@
-
-
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,88 +6,197 @@ class Selectlangscreenmain extends ConsumerStatefulWidget {
   const Selectlangscreenmain({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _SelectthemescreenmainState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _SelectlangscreenmainState();
 }
 
-class _SelectthemescreenmainState extends ConsumerState<Selectlangscreenmain> {
-
+class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
   @override
   Widget build(BuildContext context) {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
     final sss = ref.watch(sharedPreferences);
     return Scaffold(
-      backgroundColor: darkThemeMain? Color.fromRGBO(23, 21, 59,1) : const  Color.fromRGBO(249, 247, 247,1), 
-      body: SafeArea(child: Column(
-          mainAxisAlignment:  MainAxisAlignment.center,
+      backgroundColor: darkThemeMain
+          ? const Color.fromRGBO(23, 21, 59, 1)
+          : const Color.fromRGBO(249, 247, 247, 1),
+      body: SafeArea(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-         Expanded(
-          flex: 3,
-           child: Container(
-             
-             alignment: Alignment.center,             
-             child:Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-              
-               GestureDetector(
+            Text(
+              langMain == "tr" ? "Dil Seçimi" : "Select Language",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: darkThemeMain ? Colors.white : Colors.black,
+              ),
+            ),
+            SizedBox(height: 20),
+            Expanded(
+              flex: 3,
+              child: GestureDetector(
                 onTap: () => {
-
-                  
                   sss.setString("lang", "tr"),
                   ref.read(lang.notifier).state = "tr"
                 },
-                child: Image.asset("assets/trLang.png",width: 250,height: 250,)),
-               Text(darkThemeMain ? "TÜRKÇE":"TÜRKÇE",style:   TextStyle(color: darkThemeMain? Colors.white: Colors.black )),
-               Text(langMain=="tr"?"[SEÇİLEN]": "",style: const TextStyle(color:Colors.red)),
-             ],) ,
-           ),
-         ),
-        
-         Expanded(
-          flex: 3,
-           child: Container(
-               alignment: Alignment.center,
-
-               child:Column(
+                child: Container(
+                  margin: EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: darkThemeMain
+                        ? const Color.fromRGBO(23, 21, 59, 1)
+                        : const Color.fromRGBO(249, 247, 247, 1),
+                    borderRadius: BorderRadius.circular(15.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        "assets/trLang.png",
+                        width: 150,
+                        height: 150,
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "TÜRKÇE",
+                        style: TextStyle(
+                          color: darkThemeMain ? Colors.white : Colors.black,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        langMain == "tr" ? "[SEÇİLEN]" : "",
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: GestureDetector(
+                onTap: () => {
+                  sss.setString("lang", "en"),
+                  ref.read(lang.notifier).state = "en"
+                },
+                child: Container(
+                  margin: EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: darkThemeMain
+                        ? const Color.fromRGBO(23, 21, 59, 1)
+                        : const Color.fromRGBO(249, 247, 247, 1),
+                    borderRadius: BorderRadius.circular(15.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        "assets/enLang.png",
+                        width: 150,
+                        height: 150,
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "ENGLISH",
+                        style: TextStyle(
+                          color: darkThemeMain ? Colors.white : Colors.black,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        langMain == "en" ? "[CHOSEN]" : "",
+                        style: const TextStyle(
+                          color: Color.fromARGB(255, 5, 126, 57),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: () async {
+                await sss.setBool("set", true);
+                Navigator.pushNamed(context, '/loginScreen');
+              },
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-
                 children: [
-                 GestureDetector(
-                  onTap: () => {
-                     sss.setString("lang", "en"),
-                     ref.read(lang.notifier).state = "en"
-                  },
-                  child: Image.asset("assets/enLang.png",width: 170,height: 170,)),
-               Text(darkThemeMain ? "ENGLISH":"ENGLISH",style:   TextStyle(color: darkThemeMain? Colors.white: Colors.black )),
-                 Text(langMain=="tr"?"":"[CHOOSED]",style: const TextStyle(color:Color.fromARGB(255, 5, 126, 57) )),
-
-               ],) ,
-             ),
-         ),
-
-         Expanded(
-           flex: 1,
-           child: GestureDetector(
-             onTap: () async{
-              await sss.setBool("set", true);
-              Navigator.pushNamed(context,'/loginScreen');
-             },
-             child: Container(
-                  color:  darkThemeMain? Color.fromRGBO(23, 21, 59,1) : const  Color.fromRGBO(249, 247, 247,1), 
-                 alignment: Alignment.center,
-           
-                 child:Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-           
-                  children: [
-                     Image.asset("assets/selectThemeNext.png",width: 70,height: 60,)
-                 ],) ,
-               ),
-           ),
-         )
-            ],),
-      ))
-;
+                  Image.asset(
+                    "assets/selectThemeNext.png",
+                    width: 70,
+                    height: 60,
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    langMain == "tr" ? "Devam Et" : "Continue",
+                    style: TextStyle(
+                      color: darkThemeMain
+                          ? Colors.white
+                          : Color.fromRGBO(23, 21, 59, 1),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text(
+                    langMain == "tr"
+                        ? "Dil seçimi, uygulamanın dilini değiştirir."
+                        : "Language selection changes the app's language.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: darkThemeMain ? Colors.white70 : Colors.black87,
+                      fontSize: 14,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    langMain == "tr"
+                        ? "Devam etmek için bir dil seçin."
+                        : "Select a language to continue.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: darkThemeMain ? Colors.white70 : Colors.black87,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -3,11 +3,11 @@ import 'package:bartender/S/mainPart/discoverScreen/discoverScreenModel.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverScreenState.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverPageController.dart';
 import 'package:bartender/S/mainPart/discoverScreen/searchDelegate.dart';
+import 'package:bartender/mainSettings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 
 final FirebaseAuth auth = FirebaseAuth.instance;
 
@@ -22,7 +22,8 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
   @override
   Widget build(BuildContext context) {
     final tweetAsyncValue = ref.watch(tweetProvider);
-
+    final darkThemeMain = ref.watch(darkTheme);
+    final langMain = ref.watch(lang);
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -81,9 +82,10 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                             child: Column(
                               children: [
                                 ListTile(
-                                  leading: const CircleAvatar(
+                                  leading: CircleAvatar(
                                     backgroundImage: NetworkImage(
-                                        'https://picsum.photos/200'),
+                                        tweet.userPhotoURL ??
+                                            'https://picsum.photos/200'),
                                   ),
                                   title: Text(
                                     tweet.message,
@@ -114,20 +116,18 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                         children: [
                                           IconButton(
                                             icon: Icon(Icons.thumb_up),
-                                            color: tweet.likes > 0
+                                            color: tweet.likedBy.length > 0
                                                 ? Colors.blue
                                                 : Colors.grey,
                                             onPressed: () {
-                                              final userId = auth.currentUser!
-                                                  .uid; // Replace with actual user ID
+                                              final userId =
+                                                  auth.currentUser!.uid;
                                               if (tweet.likedBy
                                                   .contains(userId)) {
                                                 FirebaseFirestore.instance
                                                     .collection('tweets')
                                                     .doc(tweet.id)
                                                     .update({
-                                                  'likes':
-                                                      FieldValue.increment(-1),
                                                   'likedBy':
                                                       FieldValue.arrayRemove(
                                                           [userId]),
@@ -137,8 +137,6 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                                     .collection('tweets')
                                                     .doc(tweet.id)
                                                     .update({
-                                                  'likes':
-                                                      FieldValue.increment(1),
                                                   'likedBy':
                                                       FieldValue.arrayUnion(
                                                           [userId]),
@@ -146,7 +144,7 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                               }
                                             },
                                           ),
-                                          Text('${tweet.likes} likes'),
+                                          Text('${tweet.likedBy.length} likes'),
                                         ],
                                       ),
                                       IconButton(
@@ -179,21 +177,31 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor:
+            darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
         onPressed: () {
           showDialog(
             context: context,
             builder: (BuildContext context) {
-              final TextEditingController _controller = TextEditingController();
+              final TextEditingController _textController =
+                  TextEditingController();
               return AlertDialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15.0),
                 ),
-                title: Text('New Tweet'),
+                title: Text(
+                  langMain == "tr" ? 'Yeni Tweet' : 'New Tweet',
+                  style: TextStyle(
+                    color: darkThemeMain ? Colors.white : Colors.black,
+                  ),
+                ),
                 content: TextField(
-                  controller: _controller,
+                  controller: _textController,
                   maxLines: 5,
                   decoration: InputDecoration(
-                    hintText: 'What\'s happening?',
+                    hintText: langMain == "tr"
+                        ? 'Neler oluyor?'
+                        : 'What\'s happening?',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                     ),
@@ -204,27 +212,39 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
-                    child: Text('Cancel',
-                        style:
-                            TextStyle(color: Theme.of(context).primaryColor)),
+                    child: Text(
+                      langMain == "tr" ? 'İptal' : 'Cancel',
+                      style: TextStyle(
+                          color: darkThemeMain
+                              ? Colors.orangeAccent
+                              : Colors.deepOrange),
+                    ),
                   ),
                   ElevatedButton.icon(
                     onPressed: () {
-                      if (_controller.text.isNotEmpty) {
-                        final userId = auth
-                            .currentUser!.uid; // Replace with actual user ID
+                      if (_textController.text.isNotEmpty) {
+                        final userId = auth.currentUser!.uid;
                         FirebaseFirestore.instance.collection('tweets').add(
-                              Tweet('', _controller.text, DateTime.now(),
-                                      userId)
+                              Tweet('', _textController.text, DateTime.now(),
+                                      userId,
+                                      userPhotoURL:
+                                          auth.currentUser!.photoURL ?? '',
+                                      userName:
+                                          auth.currentUser!.displayName ?? '')
                                   .toMap(),
                             );
                         Navigator.of(context).pop();
                       }
                     },
                     icon: Icon(Icons.send, color: Colors.white),
-                    label: Text('Tweet'),
+                    label: Text(
+                      langMain == "tr" ? 'Gönder' : 'Tweet',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
+                      backgroundColor: darkThemeMain
+                          ? Colors.orangeAccent
+                          : Colors.deepOrange,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.0),
                       ),
@@ -235,15 +255,11 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
             },
           );
         },
-        child: Icon(Icons.add),
-        backgroundColor: Theme.of(context).primaryColor,
-        mini: true,
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          height: 50,
-          color: Colors.transparent,
+        child: Icon(
+          Icons.add,
+          color: Colors.white,
         ),
+        mini: true,
       ),
     );
   }

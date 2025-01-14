@@ -7,9 +7,14 @@ class Tweet {
   final String userId;
   int likes;
   List<String> likedBy;
+  String userPhotoURL;
+  String userName;
 
   Tweet(this.id, this.message, this.timestamp, this.userId,
-      {this.likes = 0, this.likedBy = const []});
+      {this.likes = 0,
+      this.likedBy = const [],
+      this.userPhotoURL = '',
+      this.userName = ''});
 
   factory Tweet.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
@@ -20,6 +25,8 @@ class Tweet {
       data['userId'] ?? '',
       likes: data['likes'] ?? 0,
       likedBy: List<String>.from(data['likedBy'] ?? []),
+      userPhotoURL: data['userPhotoURL'] ?? '',
+      userName: data['userName'] ?? '',
     );
   }
 
@@ -30,6 +37,8 @@ class Tweet {
       'userId': userId,
       'likes': likes,
       'likedBy': likedBy,
+      'userPhotoURL': userPhotoURL,
+      'userName': userName,
     };
   }
 }

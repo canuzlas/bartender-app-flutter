@@ -19,7 +19,7 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.w600);
   static final List<Widget> _widgetOptions = <Widget>[
-    const Homescreenmain(),
+    const HomeScreenMain(),
     DiscoveryScreenMain(),
     AiChatScreenMain(),
     const Profilescreenmain()
