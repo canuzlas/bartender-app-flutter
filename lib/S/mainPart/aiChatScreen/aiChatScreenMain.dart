@@ -1,46 +1,67 @@
+import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenModel.dart';
+import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenState.dart';
+import 'package:bartender/S/mainPart/discoverScreen/discoverScreenModel.dart';
+import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-final chatProvider =
-    StateNotifierProvider<ChatNotifier, List<ChatMessage>>((ref) {
-  return ChatNotifier();
-});
-
-class ChatNotifier extends StateNotifier<List<ChatMessage>> {
-  ChatNotifier() : super([]);
-
-  void sendMessage(String message) {
-    state = [...state, ChatMessage(message, true)];
-    // Simulate AI response
-    Future.delayed(Duration(seconds: 1), () {
-      state = [...state, ChatMessage("AI Response to: $message", false)];
-    });
-  }
-}
-
-class ChatMessage {
-  final String text;
-  final bool isUser;
-
-  ChatMessage(this.text, this.isUser);
-}
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AiChatScreenMain extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chatMessages = ref.watch(chatProvider);
     final TextEditingController _controller = TextEditingController();
+    final ScrollController _scrollController = ScrollController();
+    final darkThemeMain = ref.watch(darkTheme);
+    final langMain = ref.watch(lang);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(
+          _scrollController.position.maxScrollExtent,
+        );
+      }
+    });
+
+    ref.listen<List<ChatMessage>>(chatProvider, (_, __) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('AI Chat Assistant'),
-        backgroundColor: Colors.blueAccent,
+        title: Text(
+          langMain == "tr" ? "Rakun Yapay Zeka" : 'Raccon Chat Assistant',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor:
+            darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete, color: Colors.white),
+            onPressed: () {
+              ref.read(chatProvider.notifier).deleteChat();
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: ListView.builder(
+                controller: _scrollController,
                 itemCount: chatMessages.length,
                 itemBuilder: (context, index) {
                   final message = chatMessages[index];
@@ -50,19 +71,40 @@ class AiChatScreenMain extends ConsumerWidget {
                         : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.symmetric(
-                          vertical: 5, horizontal: 10),
+                          vertical: 3, horizontal: 5),
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: message.isUser
-                            ? Colors.blueAccent
+                            ? (darkThemeMain
+                                ? Colors.orangeAccent
+                                : Colors.deepOrange)
                             : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
+                          bottomLeft: message.isUser
+                              ? Radius.circular(12)
+                              : Radius.circular(0),
+                          bottomRight: message.isUser
+                              ? Radius.circular(0)
+                              : Radius.circular(12),
+                        ),
                       ),
-                      child: Text(
-                        message.text,
-                        style: TextStyle(
-                            color:
-                                message.isUser ? Colors.white : Colors.black),
+                      child: IntrinsicWidth(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                message.text,
+                                style: TextStyle(
+                                    color: message.isUser
+                                        ? Colors.white
+                                        : Colors.black),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -77,7 +119,9 @@ class AiChatScreenMain extends ConsumerWidget {
                     child: TextField(
                       controller: _controller,
                       decoration: InputDecoration(
-                        hintText: 'Type a message...',
+                        hintText: langMain == "tr"
+                            ? 'Bir mesaj yazın...'
+                            : 'Type a message...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8.0),
                         ),
@@ -86,11 +130,13 @@ class AiChatScreenMain extends ConsumerWidget {
                   ),
                   IconButton(
                     icon: Icon(Icons.send),
+                    color:
+                        darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
                     onPressed: () {
                       if (_controller.text.isNotEmpty) {
                         ref
                             .read(chatProvider.notifier)
-                            .sendMessage(_controller.text);
+                            .sendMessage(_controller.text, langMain);
                         _controller.clear();
                       }
                     },

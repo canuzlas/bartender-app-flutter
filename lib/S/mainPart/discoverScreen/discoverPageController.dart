@@ -12,6 +12,9 @@ class DiscoverPageController {
   }
 
   Future<String> getUserName(String userId) async {
+    if (userId.isEmpty) {
+      return 'Unknown';
+    }
     final userDoc =
         await FirebaseFirestore.instance.collection('users').doc(userId).get();
     return userDoc.data()?['displayname'] ?? 'Unknown';

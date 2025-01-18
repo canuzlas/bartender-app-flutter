@@ -25,42 +25,28 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'your world',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor:
+            darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search, color: Colors.white),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: UserSearchDelegate(),
+              );
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon:
-                        Icon(Icons.menu, color: Theme.of(context).primaryColor),
-                    onPressed: () {
-                      // Add menu action
-                    },
-                  ),
-                  Text(
-                    'your world',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.search,
-                        color: Theme.of(context).primaryColor),
-                    onPressed: () {
-                      showSearch(
-                        context: context,
-                        delegate: UserSearchDelegate(),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
             Expanded(
               child: tweetAsyncValue.when(
                 data: (tweets) {
@@ -72,6 +58,10 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                         future: _controller.getUserName(tweet.userId),
                         builder: (context, snapshot) {
                           final userName = snapshot.data ?? 'Loading...';
+                          final userPhotoURL =
+                              tweet.userPhotoURL?.isNotEmpty == true
+                                  ? tweet.userPhotoURL!
+                                  : 'https://picsum.photos/200';
                           return Card(
                             margin: const EdgeInsets.symmetric(
                                 vertical: 8, horizontal: 16),
@@ -83,9 +73,7 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                               children: [
                                 ListTile(
                                   leading: CircleAvatar(
-                                    backgroundImage: NetworkImage(
-                                        tweet.userPhotoURL ??
-                                            'https://picsum.photos/200'),
+                                    backgroundImage: NetworkImage(userPhotoURL),
                                   ),
                                   title: Text(
                                     tweet.message,
@@ -117,7 +105,9 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                           IconButton(
                                             icon: Icon(Icons.thumb_up),
                                             color: tweet.likedBy.length > 0
-                                                ? Colors.blue
+                                                ? (darkThemeMain
+                                                    ? Colors.orangeAccent
+                                                    : Colors.deepOrange)
                                                 : Colors.grey,
                                             onPressed: () {
                                               final userId =

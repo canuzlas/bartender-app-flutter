@@ -1,5 +1,6 @@
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenMain.dart';
 import 'package:bartender/S/mainPart/homeScreen/homeScreenMain.dart';
+import 'package:bartender/S/mainPart/msgScreen/msgScreenMain.dart';
 import 'package:bartender/S/mainPart/profileScreen/profileScreenMain.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverScreenMain.dart';
 import 'package:bartender/mainSettings.dart';
@@ -20,9 +21,11 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
       TextStyle(fontSize: 30, fontWeight: FontWeight.w600);
   static final List<Widget> _widgetOptions = <Widget>[
     const HomeScreenMain(),
+    MsgScreenMain(),
     DiscoveryScreenMain(),
     AiChatScreenMain(),
-    const Profilescreenmain()
+    const Profilescreenmain(),
+    Center(child: Text('Messages Page', style: optionStyle)),
   ];
 
   @override
@@ -44,6 +47,11 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
           width: 50,
           height: 50,
         ),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: SafeArea(
@@ -58,7 +66,7 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
               ? const Color.fromRGBO(249, 247, 247, 1)
               : const Color.fromRGBO(23, 21, 59, 1),
           iconSize: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           duration: const Duration(milliseconds: 400),
           tabBackgroundColor: darkThemeMain
               ? const Color.fromRGBO(23, 21, 59, 1)
@@ -68,6 +76,10 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
             GButton(
               icon: Icons.home,
               text: langMain == "tr" ? "Anasayfa" : 'Home',
+            ),
+            GButton(
+              icon: Icons.message,
+              text: langMain == "tr" ? "Mesajlar" : 'Messages',
             ),
             GButton(
               icon: Icons.search,
