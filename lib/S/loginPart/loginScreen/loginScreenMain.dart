@@ -70,7 +70,7 @@ class _LoginscreenmainState extends ConsumerState<Loginscreenmain> {
                     ? "Google ile giriş yap"
                     : "Sign in with Google",
                 onPressed: () {
-                  loginscreencontroller.signInWithGoogle();
+                  loginscreencontroller.signInWithGoogle(context);
                 },
               ),
               SizedBox(height: 20),

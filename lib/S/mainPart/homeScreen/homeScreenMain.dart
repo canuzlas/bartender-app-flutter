@@ -74,9 +74,14 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                 itemCount: posts.length,
                 itemBuilder: (context, index) {
                   final post = posts[index];
-                  final isLiked = (post['likedBy'] as List<dynamic>?)
-                          ?.contains(_controller.auth.currentUser?.uid) ??
-                      false;
+                  final postData = post.data() as Map<String, dynamic>?;
+                  if (postData == null) {
+                    return SizedBox.shrink();
+                  }
+                  final isLiked = ref.watch(likeProvider(post.id));
+                  final likeCount =
+                      ref.watch(likeProvider(post.id).notifier).likeCount;
+
                   return Card(
                     margin:
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -89,22 +94,22 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                         ListTile(
                           leading: CircleAvatar(
                             backgroundImage: NetworkImage(
-                                post['userPhotoURL'] ??
+                                postData['userPhotoURL'] ??
                                     'https://picsum.photos/200'),
                           ),
                           title: Text(
-                            post['message'] ?? '',
+                            postData['message'] ?? '',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
                           ),
                           subtitle: Text(
-                            'Updated by: ${post['userName'] ?? 'Unknown'}',
+                            'Updated by: ${postData['userName'] ?? 'Unknown'}',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           trailing: Text(
-                            _controller.formatTimestamp(post['timestamp']),
+                            _controller.formatTimestamp(postData['timestamp']),
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ),
@@ -119,11 +124,12 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                                     icon: Icon(Icons.thumb_up),
                                     color: isLiked ? Colors.blue : Colors.grey,
                                     onPressed: () {
-                                      _controller.toggleLike(post.id, isLiked);
+                                      ref
+                                          .read(likeProvider(post.id).notifier)
+                                          .toggleLike();
                                     },
                                   ),
-                                  Text(
-                                      '${(post['likedBy'] as List<dynamic>?)?.length ?? 0} likes'),
+                                  Text('$likeCount likes'),
                                 ],
                               ),
                               IconButton(
@@ -199,22 +205,24 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                   ElevatedButton.icon(
                     onPressed: () {
                       if (_textController.text.isNotEmpty) {
-                        final userId = _controller.auth.currentUser!.uid;
+                        final userId = FirebaseAuth.instance.currentUser?.uid;
                         final userName =
-                            _controller.auth.currentUser!.displayName;
+                            FirebaseAuth.instance.currentUser?.displayName;
                         final userPhotoURL =
-                            _controller.auth.currentUser!.photoURL;
-                        FirebaseFirestore.instance.collection('tweets').add({
-                          'userId': userId,
-                          'userName': userName,
-                          'userPhotoURL': userPhotoURL,
-                          'message': _textController.text,
-                          'timestamp': Timestamp.now(),
-                          'likedBy': [],
-                        });
-                        Navigator.of(context).pop();
-                        ref.refresh(
-                            sortedTweetsProvider); // Refresh the provider
+                            FirebaseAuth.instance.currentUser?.photoURL;
+                        if (userId != null && userName != null) {
+                          FirebaseFirestore.instance.collection('tweets').add({
+                            'userId': userId,
+                            'userName': userName,
+                            'userPhotoURL': userPhotoURL,
+                            'message': _textController.text,
+                            'timestamp': Timestamp.now(),
+                            'likedBy': [],
+                          });
+                          Navigator.of(context).pop();
+                          ref.refresh(
+                              sortedTweetsProvider); // Refresh the provider
+                        }
                       }
                     },
                     icon: Icon(Icons.send, color: Colors.white),

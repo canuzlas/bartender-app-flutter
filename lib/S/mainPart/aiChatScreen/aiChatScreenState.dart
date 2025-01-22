@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenModel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
@@ -38,11 +40,11 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
 
   Future<void> _fetchAIResponse(String message, String langMain) async {
     final response = await http.post(
-      Uri.parse("https://api.openai.com/v1/chat/completions"),
+      Uri.parse(dotenv.env['OPENAI_API_URL']!),
       headers: {
         'Content-Type': 'application/json; charset=UTF-8',
-        'Authorization':
-            'Bearer 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', // Replace with your OpenAI API key
+        'Authorization': dotenv.env['OPENAI_API_KEY']
+            .toString(), // Replace with your OpenAI API key
       },
       body: jsonEncode({
         'model': 'gpt-3.5-turbo',

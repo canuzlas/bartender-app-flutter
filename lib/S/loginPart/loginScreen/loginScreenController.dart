@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'package:bartender/S/loginPart/loginScreen/loginScreenModel.dart';
-import 'package:bartender/firestore/firestore.dart';
+import 'package:bartender/S/loginPart/firestore/firestore.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 
 class Loginscreencontroller {
   FirebaseFirestore fbs = FirebaseFirestore.instance;
 
-  signInWithGoogle() async {
+  signInWithGoogle(context) async {
     SharedPreferences sss = await getSheredPrefs();
 
     // productta kalkacak unutma
@@ -51,6 +52,8 @@ class Loginscreencontroller {
             ? print("ft gelecek login data set basarili")
             : print("ft gelecek login data set basarisiz");
       }
+      Navigator.pushNamedAndRemoveUntil(
+          context, '/botNavigation', (route) => false);
 
       return true;
     } else {

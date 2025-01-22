@@ -14,9 +14,29 @@ class Openingscreenmain extends ConsumerStatefulWidget {
 class _OpeningscreenmainState extends ConsumerState<Openingscreenmain> {
   OsController osController = OsController();
 
+  getFutureData() async {
+    var set = await loadGeneralSettings(ref, context);
+    set == true && osController.checkUserLoggedIn() == true
+        ? setTimeout(
+            () async => {Navigator.popAndPushNamed(context, '/botNavigation')},
+            2000)
+        : set == true && osController.checkUserLoggedIn() == false
+            ? setTimeout(
+                () async =>
+                    {Navigator.popAndPushNamed(context, '/loginScreen')},
+                2000)
+            : setTimeout(
+                () async =>
+                    {Navigator.popAndPushNamed(context, '/selectThemeScreen')},
+                2000);
+  }
+
   @override
   void initState() {
-    loadGeneralSettings(ref, context);
+    getFutureData();
+    print(getFutureData());
+    //print('$set ${osController.checkUserLoggedIn().toString()}');
+
     super.initState();
   }
 

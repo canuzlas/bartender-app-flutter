@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverScreenCommentsPage.dart';
 import 'package:bartender/S/mainPart/homeScreen/homeScreenController.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Profilescreenmain extends ConsumerStatefulWidget {
   const Profilescreenmain({super.key});
@@ -17,6 +18,18 @@ class Profilescreenmain extends ConsumerStatefulWidget {
 
 class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
   final FirebaseAuth auth = FirebaseAuth.instance;
+  late SharedPreferences sss;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSharedPreferences();
+  }
+
+  Future<void> _loadSharedPreferences() async {
+    sss = await SharedPreferences.getInstance();
+  }
+
   final HomeScreenController _controller = HomeScreenController();
 
   Future<void> _toggleLike(String postId, bool isLiked) async {
@@ -38,6 +51,84 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
 
   Future<void> _refreshPage() async {
     setState(() {});
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Logout'),
+        content: Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (shouldLogout == true) {
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushNamedAndRemoveUntil(
+          context, '/loginScreen', (route) => false);
+    }
+  }
+
+  Future<void> _showSettingsDialog(BuildContext context) async {
+    final darkThemeMain = ref.watch(darkTheme);
+    final langMain = ref.watch(lang);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('Theme'),
+              trailing: Switch(
+                value: darkThemeMain,
+                onChanged: (value) {
+                  sss.setBool("darkTheme", value);
+                  ref.read(darkTheme.notifier).state = value;
+                },
+              ),
+            ),
+            ListTile(
+              title: Text('Language'),
+              trailing: DropdownButton<String>(
+                value: langMain,
+                items: [
+                  DropdownMenuItem(
+                    value: 'en',
+                    child: Text('English'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'tr',
+                    child: Text('Turkish'),
+                  ),
+                ],
+                onChanged: (value) {
+                  sss.setString("lang", value.toString());
+                  ref.read(lang.notifier).state = value!;
+                },
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -92,13 +183,37 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             // Add action
                           },
                         ),
-                        IconButton(
-                          iconSize: 20,
-                          color: darkThemeMain ? Colors.white : Colors.black,
-                          icon: const Icon(CupertinoIcons.settings),
-                          onPressed: () {
-                            // Settings action
+                        PopupMenuButton<int>(
+                          onSelected: (item) async {
+                            if (item == 0) {
+                              await _showSettingsDialog(context);
+                            } else if (item == 1) {
+                              await _confirmLogout(context);
+                            }
                           },
+                          itemBuilder: (context) => [
+                            PopupMenuItem<int>(
+                              value: 0,
+                              child: Row(
+                                children: [
+                                  Icon(CupertinoIcons.settings,
+                                      color: Colors.black),
+                                  SizedBox(width: 8),
+                                  Text('Settings'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem<int>(
+                              value: 1,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.logout, color: Colors.black),
+                                  SizedBox(width: 8),
+                                  Text('Logout'),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -310,8 +425,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                         itemCount: posts.length,
                                         itemBuilder: (context, index) {
                                           final post = posts[index];
-                                          final isLiked = (post['likedBy']
-                                                      as List<dynamic>?)
+                                          final postData = post.data()
+                                              as Map<String, dynamic>;
+                                          final isLiked = postData['likedBy']
                                                   ?.contains(
                                                       auth.currentUser?.uid) ??
                                               false;
@@ -341,12 +457,12 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                                     ListTile(
                                                       leading: CircleAvatar(
                                                         backgroundImage:
-                                                            NetworkImage(post[
+                                                            NetworkImage(postData[
                                                                     'userPhotoURL'] ??
                                                                 'https://picsum.photos/200'),
                                                       ),
                                                       title: Text(
-                                                        post['userName'] ??
+                                                        postData['userName'] ??
                                                             'Unknown',
                                                         style: TextStyle(
                                                           fontWeight:
@@ -354,7 +470,8 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                                         ),
                                                       ),
                                                       subtitle: Text(
-                                                        post['message'] ?? '',
+                                                        postData['message'] ??
+                                                            '',
                                                       ),
                                                     ),
                                                     OverflowBar(
@@ -375,7 +492,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                                           },
                                                         ),
                                                         Text(
-                                                          "${(post['likedBy'] as List<dynamic>?)?.length ?? 0}",
+                                                          "${(postData['likedBy'] as List<dynamic>?)?.length ?? 0}",
                                                           style: TextStyle(
                                                             fontSize: 12,
                                                             color: darkThemeMain
@@ -439,6 +556,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                         .where('likedBy',
                                             arrayContains:
                                                 auth.currentUser?.uid)
+                                        .orderBy('timestamp', descending: true)
                                         .get(),
                                     builder: (context, snapshot) {
                                       if (snapshot.connectionState ==
@@ -457,8 +575,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                         itemCount: likedPosts.length,
                                         itemBuilder: (context, index) {
                                           final post = likedPosts[index];
-                                          final isLiked = (post['likedBy']
-                                                      as List<dynamic>?)
+                                          final postData = post.data()
+                                              as Map<String, dynamic>;
+                                          final isLiked = postData['likedBy']
                                                   ?.contains(
                                                       auth.currentUser?.uid) ??
                                               false;
@@ -488,12 +607,12 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                                     ListTile(
                                                       leading: CircleAvatar(
                                                         backgroundImage:
-                                                            NetworkImage(post[
+                                                            NetworkImage(postData[
                                                                     'userPhotoURL'] ??
                                                                 'https://picsum.photos/200'),
                                                       ),
                                                       title: Text(
-                                                        post['userName'] ??
+                                                        postData['userName'] ??
                                                             'Unknown',
                                                         style: TextStyle(
                                                           fontWeight:
@@ -501,7 +620,8 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                                         ),
                                                       ),
                                                       subtitle: Text(
-                                                        post['message'] ?? '',
+                                                        postData['message'] ??
+                                                            '',
                                                       ),
                                                     ),
                                                     OverflowBar(
@@ -522,7 +642,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                                           },
                                                         ),
                                                         Text(
-                                                          "${(post['likedBy'] as List<dynamic>?)?.length ?? 0}",
+                                                          "${(postData['likedBy'] as List<dynamic>?)?.length ?? 0}",
                                                           style: TextStyle(
                                                             fontSize: 12,
                                                             color: darkThemeMain

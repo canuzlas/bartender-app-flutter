@@ -108,6 +108,22 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
     }
   }
 
+  Future<void> deleteAllMessages() async {
+    try {
+      final querySnapshot = await _messagesRef
+          .where("senderId", isEqualTo: currentUserId)
+          .where('recipientId', isEqualTo: widget.recipientId)
+          .get();
+
+      for (var doc in querySnapshot.docs) {
+        await doc.reference.delete();
+      }
+      print("All messages deleted successfully");
+    } catch (e) {
+      print("Error deleting messages: $e");
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -128,6 +144,12 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Chat'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: deleteAllMessages,
+          ),
+        ],
       ),
       body: Column(
         children: [

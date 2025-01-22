@@ -47,43 +47,68 @@ class CommentsPage extends StatelessWidget {
                   itemCount: comments.length,
                   itemBuilder: (context, index) {
                     final comment = comments[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 4, horizontal: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      elevation: 2,
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage:
-                              NetworkImage('https://picsum.photos/200'),
-                        ),
-                        title: Text(comment['text']),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _timeAgo(comment['timestamp']?.toDate() ??
-                                  DateTime.now()),
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey),
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(comment['userId'])
+                          .get(),
+                      builder: (context, userSnapshot) {
+                        if (userSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return ListTile(
+                            title: Text('Loading...'),
+                          );
+                        }
+                        if (userSnapshot.hasError) {
+                          return ListTile(
+                            title: Text('Error: ${userSnapshot.error}'),
+                          );
+                        }
+                        final userDoc = userSnapshot.data;
+                        final userData =
+                            userDoc?.data() as Map<String, dynamic>?;
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 4, horizontal: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          elevation: 2,
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundImage: NetworkImage(
+                                  userData?['photoURL'] ??
+                                      'https://picsum.photos/200'),
                             ),
-                            if (comment['userId'] == currentUserId)
-                              IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
-                                onPressed: () {
-                                  FirebaseFirestore.instance
-                                      .collection('tweets')
-                                      .doc(tweetId)
-                                      .collection('comments')
-                                      .doc(comment.id)
-                                      .delete();
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
+                            title: Text(userData?['displayname'] ?? 'Unknown'),
+                            subtitle: Text(comment['text']),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _timeAgo(comment['timestamp']?.toDate() ??
+                                      DateTime.now()),
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey),
+                                ),
+                                if (comment['userId'] == currentUserId)
+                                  IconButton(
+                                    icon: Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () {
+                                      FirebaseFirestore.instance
+                                          .collection('tweets')
+                                          .doc(tweetId)
+                                          .collection('comments')
+                                          .doc(comment.id)
+                                          .delete();
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -134,7 +159,7 @@ class CommentsPage extends StatelessWidget {
           ),
           SafeArea(
             child: Container(
-              height: 50,
+              height: 20,
               color: Colors.transparent,
             ),
           ),
