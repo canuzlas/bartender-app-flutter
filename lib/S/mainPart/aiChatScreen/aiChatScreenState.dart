@@ -39,38 +39,49 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 
   Future<void> _fetchAIResponse(String message, String langMain) async {
-    final response = await http.post(
-      Uri.parse(dotenv.env['OPENAI_API_URL']!),
-      headers: {
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Authorization': dotenv.env['OPENAI_API_KEY']
-            .toString(), // Replace with your OpenAI API key
-      },
-      body: jsonEncode({
-        'model': 'gpt-3.5-turbo',
-        'messages': [
-          {'role': 'user', 'content': message}
-        ],
-      }),
-    );
+    try {
+      final apiUrl = dotenv.env['OPENAI_API_URL'];
+      final apiKey = dotenv.env['OPENAI_API_KEY'];
 
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
-      final aiResponse = jsonResponse['choices'][0]['message']['content'];
-      state = state.sublist(0, state.length - 1);
-      state = [...state, ChatMessage(aiResponse, false)];
-      // Save AI response to Firestore
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await FirebaseFirestore.instance.collection('aichat').add({
-          'uid': user.uid,
-          'text': aiResponse,
-          'isUser': false,
-          'timestamp': Timestamp.now(),
-        });
+      if (apiUrl == null || apiKey == null) {
+        throw Exception('API URL or API Key is not set');
       }
-    } else {
+
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'model': 'gpt-3.5-turbo',
+          'messages': [
+            {'role': 'user', 'content': message}
+          ],
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        final aiResponse = jsonResponse['choices'][0]['message']['content'];
+        state = state.sublist(0, state.length - 1);
+        state = [...state, ChatMessage(aiResponse, false)];
+        // Save AI response to Firestore
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance.collection('aichat').add({
+            'uid': user.uid,
+            'text': aiResponse,
+            'isUser': false,
+            'timestamp': Timestamp.now(),
+          });
+        }
+      } else {
+        throw Exception('Failed to get AI response: ${response.body}');
+      }
+    } catch (e) {
       // Handle error
+      print('Error fetching AI response: $e');
       state = state.sublist(0, state.length - 1);
       final errorMessage = langMain == "tr"
           ? "Hata: Yanıt alınamadı"

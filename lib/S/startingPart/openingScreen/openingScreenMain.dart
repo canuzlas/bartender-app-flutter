@@ -19,7 +19,7 @@ class _OpeningscreenmainState extends ConsumerState<Openingscreenmain> {
     set == true && osController.checkUserLoggedIn() == true
         ? setTimeout(
             () async => {Navigator.popAndPushNamed(context, '/botNavigation')},
-            2000)
+            0100)
         : set == true && osController.checkUserLoggedIn() == false
             ? setTimeout(
                 () async =>

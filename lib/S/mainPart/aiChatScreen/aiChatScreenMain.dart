@@ -1,14 +1,8 @@
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenModel.dart';
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenState.dart';
-import 'package:bartender/S/mainPart/discoverScreen/discoverScreenModel.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class AiChatScreenMain extends ConsumerWidget {
   @override
@@ -43,13 +37,13 @@ class AiChatScreenMain extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           langMain == "tr" ? "Rakun Yapay Zeka" : 'Raccon Chat Assistant',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: darkThemeMain ? Colors.white : Colors.black),
         ),
-        backgroundColor:
-            darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
+        backgroundColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: Icon(Icons.delete, color: Colors.white),
+            icon: Icon(Icons.delete,
+                color: darkThemeMain ? Colors.red : Colors.red),
             onPressed: () {
               ref.read(chatProvider.notifier).deleteChat();
             },

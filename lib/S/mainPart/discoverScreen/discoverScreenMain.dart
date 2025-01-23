@@ -28,13 +28,13 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
       appBar: AppBar(
         title: Text(
           'your world',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: darkThemeMain ? Colors.white : Colors.black),
         ),
-        backgroundColor:
-            darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
+        backgroundColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: Icon(Icons.search, color: Colors.white),
+            icon: Icon(Icons.search,
+                color: darkThemeMain ? Colors.white : Colors.black),
             onPressed: () {
               showSearch(
                 context: context,

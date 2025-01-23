@@ -1,9 +1,9 @@
+import 'package:bartender/S/mainPart/otherUserProfileScreen/otherUserProfileScreen.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverScreenCommentsPage.dart';
 import 'package:bartender/S/mainPart/homeScreen/homeScreenController.dart';
 
@@ -92,16 +92,36 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: NetworkImage(
-                                postData['userPhotoURL'] ??
-                                    'https://picsum.photos/200'),
+                          leading: GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => OtherUserProfileScreen(
+                                      userId: postData['userId']),
+                                ),
+                              );
+                            },
+                            child: CircleAvatar(
+                              backgroundImage: NetworkImage(
+                                  postData['userPhotoURL'] ??
+                                      'https://picsum.photos/200'),
+                            ),
                           ),
-                          title: Text(
-                            postData['message'] ?? '',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                          title: GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => OtherUserProfileScreen(
+                                      userId: postData['userId']),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              postData['message'] ?? '',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                           subtitle: Text(
@@ -203,7 +223,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                     ),
                   ),
                   ElevatedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       if (_textController.text.isNotEmpty) {
                         final userId = FirebaseAuth.instance.currentUser?.uid;
                         final userName =
