@@ -5,6 +5,74 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AiChatScreenMain extends ConsumerWidget {
+  const AiChatScreenMain({Key? key}) : super(key: key);
+
+  // New helper method to build a message bubble.
+  Widget _buildMessageBubble(ChatMessage message, bool darkThemeMain) => Align(
+        alignment:
+            message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: message.isUser
+                ? (darkThemeMain ? Colors.orangeAccent : Colors.deepOrange)
+                : Colors.grey[300],
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            message.text,
+            style: TextStyle(
+              color: message.isUser ? Colors.white : Colors.black87,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      );
+
+  // New helper method to build the chat input area.
+  Widget _buildChatInput(BuildContext context, TextEditingController controller,
+          bool darkThemeMain, String langMain, WidgetRef ref) =>
+      Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: langMain == "tr"
+                      ? 'Bir mesaj yazın...'
+                      : 'Type a message...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                if (controller.text.isNotEmpty) {
+                  ref
+                      .read(chatProvider.notifier)
+                      .sendMessage(controller.text, langMain);
+                  controller.clear();
+                }
+              },
+              child: const Icon(Icons.send),
+            ),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chatMessages = ref.watch(chatProvider);
@@ -15,9 +83,7 @@ class AiChatScreenMain extends ConsumerWidget {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.jumpTo(
-          _scrollController.position.maxScrollExtent,
-        );
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
 
@@ -26,7 +92,7 @@ class AiChatScreenMain extends ConsumerWidget {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
           );
         }
@@ -40,13 +106,19 @@ class AiChatScreenMain extends ConsumerWidget {
           style: TextStyle(color: darkThemeMain ? Colors.white : Colors.black),
         ),
         backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blueAccent, Colors.deepPurpleAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.delete,
-                color: darkThemeMain ? Colors.red : Colors.red),
-            onPressed: () {
-              ref.read(chatProvider.notifier).deleteChat();
-            },
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: () => ref.read(chatProvider.notifier).deleteChat(),
           ),
         ],
       ),
@@ -59,85 +131,11 @@ class AiChatScreenMain extends ConsumerWidget {
                 itemCount: chatMessages.length,
                 itemBuilder: (context, index) {
                   final message = chatMessages[index];
-                  return Align(
-                    alignment: message.isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 3, horizontal: 5),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: message.isUser
-                            ? (darkThemeMain
-                                ? Colors.orangeAccent
-                                : Colors.deepOrange)
-                            : Colors.grey[300],
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          topRight: Radius.circular(12),
-                          bottomLeft: message.isUser
-                              ? Radius.circular(12)
-                              : Radius.circular(0),
-                          bottomRight: message.isUser
-                              ? Radius.circular(0)
-                              : Radius.circular(12),
-                        ),
-                      ),
-                      child: IntrinsicWidth(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                message.text,
-                                style: TextStyle(
-                                    color: message.isUser
-                                        ? Colors.white
-                                        : Colors.black),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
+                  return _buildMessageBubble(message, darkThemeMain);
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      decoration: InputDecoration(
-                        hintText: langMain == "tr"
-                            ? 'Bir mesaj yazın...'
-                            : 'Type a message...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                        ),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.send),
-                    color:
-                        darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
-                    onPressed: () {
-                      if (_controller.text.isNotEmpty) {
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage(_controller.text, langMain);
-                        _controller.clear();
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
+            _buildChatInput(context, _controller, darkThemeMain, langMain, ref),
           ],
         ),
       ),
