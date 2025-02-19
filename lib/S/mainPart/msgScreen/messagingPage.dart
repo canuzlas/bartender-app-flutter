@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:flutter/services.dart'; // For haptic feedback if needed
 
 // Define a provider to fetch recipient data
 final recipientDataProvider =
@@ -34,6 +35,11 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
   final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
   final CollectionReference _messagesRef =
       FirebaseFirestore.instance.collection('messages');
+
+  // List of emojis to react with
+  final List<String> _emojiOptions = ['👍', '❤️', '😂', '😮', '😢', '👏'];
+  int?
+      _activeMessageTimestamp; // New state variable to track open reaction area
 
   Future<void> _updateExistingDocuments(
       List<QueryDocumentSnapshot> docs, Map<String, dynamic> message) async {
@@ -198,6 +204,92 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
     }
   }
 
+  // New method to show emoji picker on double tap.
+  void _showReactionPicker(
+      Map<String, dynamic> message, String conversationId) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            children: _emojiOptions.map((emoji) {
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  _updateMessageReaction(conversationId, message, emoji);
+                },
+                child: Center(
+                  child: Text(emoji, style: TextStyle(fontSize: 30)),
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  // Updated method to update reaction after performing all reads.
+  Future<void> _updateMessageReaction(String conversationId,
+      Map<String, dynamic> targetMessage, String emoji) async {
+    final reverseConversationId = conversationId.split('-').reversed.join('-');
+    final conversationRef = _messagesRef.doc(conversationId);
+    final reverseRef = _messagesRef.doc(reverseConversationId);
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      // Read both documents before doing any writes.
+      DocumentSnapshot snap1 = await transaction.get(conversationRef);
+      DocumentSnapshot snap2 = await transaction.get(reverseRef);
+
+      // Prepare update for primary conversation doc if exists.
+      if (snap1.exists) {
+        final data = snap1.data() as Map<String, dynamic>;
+        List<dynamic> messages = data['messages'] ?? [];
+        List<dynamic> updatedMessages = messages.map((msg) {
+          if ((msg['timestamp'] as Timestamp).seconds ==
+                  (targetMessage['timestamp'] as Timestamp).seconds &&
+              msg['content'] == targetMessage['content']) {
+            return {
+              ...msg,
+              'reaction': emoji,
+            };
+          }
+          return msg;
+        }).toList();
+        transaction.update(conversationRef, {
+          'messages': updatedMessages,
+        });
+      }
+
+      // Prepare update for reverse conversation doc if exists.
+      if (snap2.exists) {
+        final data2 = snap2.data() as Map<String, dynamic>;
+        List<dynamic> messages2 = data2['messages'] ?? [];
+        List<dynamic> updatedMessages2 = messages2.map((msg) {
+          if ((msg['timestamp'] as Timestamp).seconds ==
+                  (targetMessage['timestamp'] as Timestamp).seconds &&
+              msg['content'] == targetMessage['content']) {
+            return {
+              ...msg,
+              'reaction': emoji,
+            };
+          }
+          return msg;
+        }).toList();
+        transaction.update(reverseRef, {
+          'messages': updatedMessages2,
+        });
+      }
+    }).catchError((e) {
+      print("Error updating message reaction: $e");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final recipientDataAsync =
@@ -206,7 +298,24 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chat'),
+        title: recipientDataAsync.when(
+          data: (data) {
+            return Row(
+              children: [
+                CircleAvatar(
+                  backgroundImage: data?['photoURL'] != null
+                      ? NetworkImage(data!['photoURL'])
+                      : null,
+                  child: data?['photoURL'] == null ? Icon(Icons.person) : null,
+                ),
+                SizedBox(width: 8),
+                Text(data?['displayname'] ?? "Chat"),
+              ],
+            );
+          },
+          loading: () => Text("Loading..."),
+          error: (_, __) => Text("Chat"),
+        ),
         actions: [
           IconButton(
             icon: Icon(Icons.delete),
@@ -258,40 +367,128 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
                       final timestamp = message['timestamp'] != null
                           ? (message['timestamp'] as Timestamp).toDate()
                           : DateTime.now();
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 4.0, horizontal: 8.0),
-                        child: Align(
-                          alignment: isMe
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Container(
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.7,
-                            ),
-                            padding: EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 15),
-                            decoration: BoxDecoration(
-                              color: isMe ? Colors.blue : Colors.grey[300],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                      final msgTime =
+                          (message['timestamp'] as Timestamp).seconds;
+                      // Wrap message bubble with GestureDetector for double tap.
+                      return GestureDetector(
+                        onDoubleTap: () {
+                          setState(() {
+                            _activeMessageTimestamp =
+                                (_activeMessageTimestamp == msgTime
+                                    ? null
+                                    : msgTime);
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 4.0, horizontal: 8.0),
+                          child: Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
                             child: Column(
                               crossAxisAlignment: isMe
                                   ? CrossAxisAlignment.end
                                   : CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  messageText,
-                                  style: TextStyle(
-                                      color:
-                                          isMe ? Colors.white : Colors.black),
+                                Stack(
+                                  children: [
+                                    Container(
+                                      constraints: BoxConstraints(
+                                        maxWidth:
+                                            MediaQuery.of(context).size.width *
+                                                0.7,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 10, horizontal: 15),
+                                      decoration: BoxDecoration(
+                                        gradient: isMe
+                                            ? LinearGradient(
+                                                colors: [
+                                                  Colors.blueAccent,
+                                                  Colors.lightBlue
+                                                ],
+                                              )
+                                            : LinearGradient(
+                                                colors: [
+                                                  Colors.grey[300]!,
+                                                  Colors.grey[400]!
+                                                ],
+                                              ),
+                                        borderRadius: BorderRadius.only(
+                                          topLeft: Radius.circular(12),
+                                          topRight: Radius.circular(12),
+                                          bottomLeft: isMe
+                                              ? Radius.circular(12)
+                                              : Radius.circular(0),
+                                          bottomRight: isMe
+                                              ? Radius.circular(0)
+                                              : Radius.circular(12),
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                              color: Colors.black12,
+                                              blurRadius: 4,
+                                              offset: Offset(2, 2))
+                                        ],
+                                      ),
+                                      child: Text(
+                                        messageText,
+                                        style: TextStyle(
+                                            color: isMe
+                                                ? Colors.white
+                                                : Colors.black),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  DateFormat('hh:mm a').format(timestamp),
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey),
-                                )
+                                // Inline reaction area
+                                if (_activeMessageTimestamp == msgTime)
+                                  Container(
+                                    margin: EdgeInsets.only(top: 4),
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: 8, horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Wrap(
+                                      spacing: 16,
+                                      runSpacing: 8,
+                                      children: _emojiOptions.map((emoji) {
+                                        return GestureDetector(
+                                          onTap: () {
+                                            _updateMessageReaction(
+                                                conversationId, message, emoji);
+                                            setState(() {
+                                              _activeMessageTimestamp = null;
+                                            });
+                                          },
+                                          child: Text(emoji,
+                                              style: TextStyle(fontSize: 30)),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (message['reaction'] != null)
+                                      Text(
+                                        message['reaction'],
+                                        style: TextStyle(
+                                            fontSize: 14, color: Colors.grey),
+                                      ),
+                                    if (message['reaction'] != null)
+                                      SizedBox(width: 4),
+                                    Text(
+                                      DateFormat('hh:mm a').format(timestamp),
+                                      style: TextStyle(
+                                          fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
@@ -309,24 +506,37 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
           // ...existing code for message input field...
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Type a message',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(2, 2))
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: InputDecoration(
+                          hintText: 'Type a message...',
+                          border: InputBorder.none,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: sendMessage,
-                ),
-              ],
+                  IconButton(
+                    icon: Icon(Icons.send, color: Colors.blue),
+                    onPressed: sendMessage,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
