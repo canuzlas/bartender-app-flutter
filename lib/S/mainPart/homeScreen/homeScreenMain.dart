@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:bartender/S/mainPart/discoverScreen/discoverScreenCommentsPage.dart';
+import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
 import 'package:bartender/S/mainPart/homeScreen/homeScreenController.dart';
 
 final sortedTweetsProvider = StreamProvider.autoDispose<
@@ -38,6 +38,19 @@ class HomeScreenMain extends ConsumerStatefulWidget {
 
 class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
   final HomeScreenController _controller = HomeScreenController();
+
+  void _navigateToProfile(BuildContext context, String userId) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null && currentUser.uid == userId) {
+      Navigator.pushNamed(context, '/botNavigation');
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => OtherUserProfileScreen(userId: userId),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,12 +107,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                         ListTile(
                           leading: GestureDetector(
                             onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => OtherUserProfileScreen(
-                                      userId: postData['userId']),
-                                ),
-                              );
+                              _navigateToProfile(context, postData['userId']);
                             },
                             child: CircleAvatar(
                               backgroundImage: NetworkImage(
@@ -109,12 +117,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                           ),
                           title: GestureDetector(
                             onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => OtherUserProfileScreen(
-                                      userId: postData['userId']),
-                                ),
-                              );
+                              _navigateToProfile(context, postData['userId']);
                             },
                             child: Text(
                               postData['message'] ?? '',

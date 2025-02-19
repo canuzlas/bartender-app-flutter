@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:rxdart/rxdart.dart';
 
 // Define a provider to fetch recipient data
 final recipientDataProvider =
@@ -43,6 +44,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
           DocumentSnapshot freshSnap = await transaction.get(doc.reference);
           transaction.update(freshSnap.reference, {
             'messages': FieldValue.arrayUnion([message]),
+            'lastMessage': message['content'], // Update lastMessage field
           });
         });
         print("Document ${doc.id} updated successfully");
@@ -65,7 +67,9 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
     }
   }
 
-  Map<String, dynamic> createNewMessage(Map<String, dynamic> message) {
+  Map<String, dynamic> createNewMessage(
+    Map<String, dynamic> message,
+  ) {
     return {
       'senderId': currentUserId,
       'recipientId': widget.recipientId,
@@ -77,50 +81,96 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
     };
   }
 
+  Map<String, dynamic> createNewMessage1(
+    Map<String, dynamic> message,
+  ) {
+    return {
+      'senderId': widget.recipientId,
+      'recipientId': currentUserId,
+      'lastMessage': message['content'],
+      'timestamp': message['timestamp'],
+      'messages': [message],
+      'isRead': false,
+      'isSent': false,
+    };
+  }
+
   Future<void> sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
-    final message = {
-      'senderId': currentUserId,
-      'recipientId': widget.recipientId,
+    // Ensure IDs are stored as strings
+    final senderMessage = {
+      'senderId': currentUserId.toString(),
+      'recipientId': widget.recipientId.toString(),
       'content': _messageController.text.trim(),
       'timestamp': Timestamp.now(),
       'isRead': false,
       'isSent': true,
     };
 
-    try {
-      final querySnapshot = await _messagesRef
-          .where("senderId", isEqualTo: currentUserId)
-          .where('recipientId', isEqualTo: widget.recipientId)
-          .get();
+    final recipientMessage = {
+      'senderId': currentUserId.toString(),
+      'recipientId': widget.recipientId.toString(),
+      'content': _messageController.text.trim(),
+      'timestamp': Timestamp.now(),
+      'isRead': false,
+      'isSent': true,
+    };
 
-      if (querySnapshot.docs.isNotEmpty) {
-        await _updateExistingDocuments(querySnapshot.docs, message);
+    final conversationIdSender = "$currentUserId-${widget.recipientId}";
+    final conversationIdRecipient = "${widget.recipientId}-$currentUserId";
+    final conversationRefSender = _messagesRef.doc(conversationIdSender);
+    final conversationRefRecipient = _messagesRef.doc(conversationIdRecipient);
+
+    try {
+      // Save sender's message
+      final senderSnap = await conversationRefSender.get();
+      if (senderSnap.exists) {
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          final freshSnap = await transaction.get(conversationRefSender);
+          transaction.update(freshSnap.reference, {
+            'messages': FieldValue.arrayUnion([senderMessage]),
+            'lastMessage': senderMessage['content'],
+            'timestamp': senderMessage['timestamp'],
+          });
+        });
       } else {
-        await _addNewMessage(createNewMessage(message));
+        await conversationRefSender.set({
+          'senderId': currentUserId,
+          'recipientId': widget.recipientId,
+          'messages': [senderMessage],
+          'lastMessage': senderMessage['content'],
+          'timestamp': senderMessage['timestamp'],
+          'participants': [currentUserId, widget.recipientId],
+        });
+      }
+
+      // Save recipient's message
+      final recipientSnap = await conversationRefRecipient.get();
+      if (recipientSnap.exists) {
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          final freshSnap = await transaction.get(conversationRefRecipient);
+          transaction.update(freshSnap.reference, {
+            'messages': FieldValue.arrayUnion([recipientMessage]),
+            'lastMessage': recipientMessage['content'],
+            'timestamp': recipientMessage['timestamp'],
+          });
+        });
+      } else {
+        await conversationRefRecipient.set({
+          'senderId': widget.recipientId,
+          'recipientId': currentUserId,
+          'messages': [recipientMessage],
+          'lastMessage': recipientMessage['content'],
+          'timestamp': recipientMessage['timestamp'],
+          'participants': [widget.recipientId, currentUserId],
+        });
       }
 
       _messageController.clear();
       _scrollToBottom();
     } catch (e) {
       print("Error sending message: $e");
-    }
-  }
-
-  Future<void> deleteAllMessages() async {
-    try {
-      final querySnapshot = await _messagesRef
-          .where("senderId", isEqualTo: currentUserId)
-          .where('recipientId', isEqualTo: widget.recipientId)
-          .get();
-
-      for (var doc in querySnapshot.docs) {
-        await doc.reference.delete();
-      }
-      print("All messages deleted successfully");
-    } catch (e) {
-      print("Error deleting messages: $e");
     }
   }
 
@@ -136,10 +186,23 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
     });
   }
 
+  void deleteAllMessages() async {
+    try {
+      final conversationIdSender = "$currentUserId-${widget.recipientId}";
+      // Removed deletion for the recipient's conversation document.
+      await _messagesRef.doc(conversationIdSender).delete();
+      print(
+          "Messages for conversation $conversationIdSender deleted successfully");
+    } catch (e) {
+      print("Error deleting messages: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final recipientDataAsync =
         ref.watch(recipientDataProvider(widget.recipientId));
+    final conversationId = "$currentUserId-${widget.recipientId}";
 
     return Scaffold(
       appBar: AppBar(
@@ -153,45 +216,10 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
       ),
       body: Column(
         children: [
-          recipientDataAsync.when(
-            data: (recipientData) {
-              if (recipientData != null) {
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundImage: recipientData['photoURL'] != null
-                            ? NetworkImage(recipientData['photoURL'])
-                            : AssetImage('assets/openingPageDT.png')
-                                as ImageProvider,
-                        radius: 30,
-                      ),
-                      SizedBox(width: 16),
-                      Text(
-                        recipientData['displayname'] ?? 'Unknown',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              } else {
-                return SizedBox.shrink();
-              }
-            },
-            loading: () => Center(child: CircularProgressIndicator()),
-            error: (error, stack) =>
-                Center(child: Text('Error loading recipient data')),
-          ),
+          // ...existing code for recipient widget...
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _messagesRef
-                  .where("senderId", isEqualTo: currentUserId)
-                  .where('recipientId', isEqualTo: widget.recipientId)
-                  .snapshots(),
+            child: StreamBuilder<DocumentSnapshot>(
+              stream: _messagesRef.doc(conversationId).snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
@@ -200,22 +228,17 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
                   print("Error: ${snapshot.error}");
                   return Center(child: Text('An error occurred.'));
                 }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                if (!snapshot.hasData || !(snapshot.data!.exists)) {
                   return Center(child: Text('No messages found.'));
                 }
                 try {
-                  final messages = snapshot.data!.docs
-                      .expand((doc) =>
-                          (doc.data() as Map<String, dynamic>)['messages']
-                              as List<dynamic>? ??
-                          [])
-                      .toList();
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  final messages = (data['messages'] as List<dynamic>? ?? []);
 
-                  // Sort messages by timestamp from old to new
                   messages.sort((a, b) {
-                    final timestampA = (a['timestamp'] as Timestamp).toDate();
-                    final timestampB = (b['timestamp'] as Timestamp).toDate();
-                    return timestampA.compareTo(timestampB);
+                    final timeA = (a['timestamp'] as Timestamp).toDate();
+                    final timeB = (b['timestamp'] as Timestamp).toDate();
+                    return timeA.compareTo(timeB);
                   });
 
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -227,37 +250,50 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final message = messages[index] as Map<String, dynamic>;
-                      final isMe = message['senderId'] == currentUserId;
+                      // Convert senderId to String and compare directly.
+                      final String senderId = message['senderId'].toString();
+                      final bool isMe = senderId == currentUserId;
+
                       final messageText = message['content'] ?? 'No message';
                       final timestamp = message['timestamp'] != null
                           ? (message['timestamp'] as Timestamp).toDate()
                           : DateTime.now();
-                      return ListTile(
-                        title: Align(
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4.0, horizontal: 8.0),
+                        child: Align(
                           alignment: isMe
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
                           child: Container(
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.7,
+                            ),
                             padding: EdgeInsets.symmetric(
                                 vertical: 10, horizontal: 15),
                             decoration: BoxDecoration(
                               color: isMe ? Colors.blue : Colors.grey[300],
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(
-                              messageText,
-                              style: TextStyle(
-                                  color: isMe ? Colors.white : Colors.black),
+                            child: Column(
+                              crossAxisAlignment: isMe
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  messageText,
+                                  style: TextStyle(
+                                      color:
+                                          isMe ? Colors.white : Colors.black),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  DateFormat('hh:mm a').format(timestamp),
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey),
+                                )
+                              ],
                             ),
-                          ),
-                        ),
-                        subtitle: Align(
-                          alignment: isMe
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Text(
-                            DateFormat('hh:mm a').format(timestamp),
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ),
                       );
@@ -270,6 +306,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
               },
             ),
           ),
+          // ...existing code for message input field...
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(

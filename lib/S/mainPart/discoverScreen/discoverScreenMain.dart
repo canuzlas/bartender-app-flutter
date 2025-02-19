@@ -1,8 +1,9 @@
-import 'package:bartender/S/mainPart/discoverScreen/discoverScreenCommentsPage.dart';
+import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverScreenModel.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverScreenState.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverPageController.dart';
 import 'package:bartender/S/mainPart/discoverScreen/searchDelegate.dart';
+import 'package:bartender/S/mainPart/otherUserProfileScreen/otherUserProfileScreen.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -72,14 +73,33 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                             child: Column(
                               children: [
                                 ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundImage: NetworkImage(userPhotoURL),
+                                  leading: GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  OtherUserProfileScreen(
+                                                      userId: tweet.userId)));
+                                    },
+                                    child: CircleAvatar(
+                                      backgroundImage:
+                                          NetworkImage(userPhotoURL),
+                                    ),
                                   ),
-                                  title: Text(
-                                    tweet.message,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                  title: GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  OtherUserProfileScreen(
+                                                      userId: tweet.userId)));
+                                    },
+                                    child: Text(
+                                      tweet.message,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                   ),
                                   subtitle: Text(

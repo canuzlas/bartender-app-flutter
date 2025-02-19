@@ -1,8 +1,10 @@
+import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bartender/S/mainPart/msgScreen/messagingPage.dart';
+import 'package:intl/intl.dart';
 
 class OtherUserProfileScreen extends ConsumerWidget {
   final String userId;
@@ -13,122 +15,271 @@ class OtherUserProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsyncValue = ref.watch(userProvider(userId));
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final tweetCountAsyncValue = ref.watch(tweetCountProvider(userId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('User Profile'),
-      ),
       body: userAsyncValue.when(
         data: (userData) {
           if (userData == null) {
-            return Center(child: Text('User not found'));
+            return const Center(child: Text('User not found'));
           }
           final isFollowing = ref.watch(followingProvider(userId));
+          final joinDate = userData['createdAt'] != null
+              ? (userData['createdAt'] as Timestamp).toDate()
+              : null;
 
-          return ListView(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundImage: NetworkImage(
-                          userData['photoURL'] ?? 'https://picsum.photos/200'),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      userData['displayname'] ?? 'Unknown',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      userData['bio'] ?? '',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+          return Scaffold(
+            body: CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: 200.0,
+                  floating: false,
+                  pinned: true,
+                  backgroundColor: Colors.transparent,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Stack(
+                      fit: StackFit.expand,
                       children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            if (isFollowing) {
-                              ref
-                                  .read(followingProvider(userId).notifier)
-                                  .unfollow();
-                            } else {
-                              ref
-                                  .read(followingProvider(userId).notifier)
-                                  .follow();
-                            }
-                          },
-                          child: Text(isFollowing ? 'Unfollow' : 'Follow'),
+                        Image.network(
+                          userData['coverPhotoURL'] ??
+                              'https://picsum.photos/id/237/200/300',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const ColoredBox(
+                            color: Colors.grey,
+                            child: Center(child: Icon(Icons.error)),
+                          ),
                         ),
-                        SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    MessagingPage(recipientId: userId),
-                              ),
-                            );
-                          },
-                          child: Text('Message'),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.5),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              Divider(),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'User Tweets',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundImage: NetworkImage(
+                                userData['photoURL'] ??
+                                    'https://picsum.photos/200',
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (isFollowing) {
+                                      ref
+                                          .read(followingProvider(userId)
+                                              .notifier)
+                                          .unfollow();
+                                    } else {
+                                      ref
+                                          .read(followingProvider(userId)
+                                              .notifier)
+                                          .follow();
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isFollowing
+                                        ? Colors.redAccent
+                                        : Colors.blue,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child:
+                                      Text(isFollowing ? 'Unfollow' : 'Follow'),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            MessagingPage(recipientId: userId),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Message'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          userData['displayname'] ?? 'Unknown',
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          userData['bio'] ?? 'No bio available',
+                          style:
+                              const TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 8),
+                        if (joinDate != null)
+                          Text(
+                            'Joined: ${DateFormat('MMMM d, y').format(joinDate)}',
+                            style: const TextStyle(
+                                fontSize: 14, color: Colors.grey),
+                          ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildInfoColumn(
+                                context,
+                                'Followers',
+                                userData['followers']?.length.toString() ??
+                                    '0'),
+                            _buildInfoColumn(
+                                context,
+                                'Following',
+                                userData['following']?.length.toString() ??
+                                    '0'),
+                            tweetCountAsyncValue.when(
+                              data: (tweetCount) => _buildInfoColumn(
+                                  context, 'Tweets', '$tweetCount'),
+                              loading: () =>
+                                  _buildInfoColumn(context, 'Tweets', '-'),
+                              error: (error, stackTrace) =>
+                                  _buildInfoColumn(context, 'Tweets', 'Err'),
+                            ),
+                          ],
+                        ),
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'User Tweets',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              // Display user's tweets
-              Consumer(
-                builder: (context, watch, child) {
-                  final userTweetsAsyncValue =
-                      ref.watch(userTweetsProvider(userId));
-                  return userTweetsAsyncValue.when(
-                    data: (tweets) {
-                      if (tweets.isEmpty) {
-                        return Center(child: Text('No tweets found'));
-                      }
-                      return ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        itemCount: tweets.length,
-                        itemBuilder: (context, index) {
-                          final tweet = tweets[index];
-                          final tweetData =
-                              tweet.data() as Map<String, dynamic>;
-                          return ListTile(
-                            title: Text(tweetData['message'] ?? ''),
-                            subtitle: Text(
-                                'Posted on: ${tweetData['timestamp'].toDate()}'),
-                          );
-                        },
-                      );
-                    },
-                    loading: () => Center(child: CircularProgressIndicator()),
-                    error: (error, stack) =>
-                        Center(child: Text('Error: $error')),
-                  );
-                },
-              ),
-            ],
+                Consumer(
+                  builder: (context, watch, child) {
+                    final userTweetsAsyncValue =
+                        ref.watch(userTweetsProvider(userId));
+                    return userTweetsAsyncValue.when(
+                      data: (tweets) {
+                        if (tweets.isEmpty) {
+                          return const SliverToBoxAdapter(
+                              child: Center(child: Text('No tweets found')));
+                        }
+                        return SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final tweet = tweets[index];
+                              final tweetData =
+                                  tweet.data() as Map<String, dynamic>;
+                              // Extract like and comment counts, defaulting to 0
+                              final likeCount = tweetData['likes'] ?? 0;
+                              final commentCount = tweetData['comments'] ?? 0;
+                              return Card(
+                                margin: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ListTile(
+                                      title: Text(tweetData['message'] ?? ''),
+                                      subtitle: Text(
+                                          'Posted on: ${tweetData['timestamp'].toDate()}'),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0, vertical: 8.0),
+                                      child: Row(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.favorite_border),
+                                            onPressed: () async {
+                                              await tweet.reference.update({
+                                                'likes': FieldValue.increment(1)
+                                              });
+                                            },
+                                          ),
+                                          Text('$likeCount'),
+                                          const SizedBox(width: 16),
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.comment_bank_outlined),
+                                            onPressed: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      CommentsPage(
+                                                          tweetId: tweet.id),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          Text('$commentCount'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            childCount: tweets.length,
+                          ),
+                        );
+                      },
+                      loading: () => const SliverToBoxAdapter(
+                          child: Center(child: CircularProgressIndicator())),
+                      error: (error, stack) => SliverToBoxAdapter(
+                          child: Center(child: Text('Error: $error'))),
+                    );
+                  },
+                ),
+              ],
+            ),
           );
         },
-        loading: () => Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),
+    );
+  }
+
+  Widget _buildInfoColumn(BuildContext context, String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+      ],
     );
   }
 }
@@ -200,3 +351,12 @@ class FollowingNotifier extends StateNotifier<bool> {
     state = false;
   }
 }
+
+final tweetCountProvider =
+    FutureProvider.family<int, String>((ref, userId) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('tweets')
+      .where('userId', isEqualTo: userId)
+      .get();
+  return snapshot.size;
+});

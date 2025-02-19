@@ -1,9 +1,11 @@
 import 'package:bartender/S/mainPart/discoverScreen/discoverScreenMain.dart';
+import 'package:bartender/mainSettings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CommentsPage extends StatelessWidget {
+class CommentsPage extends ConsumerWidget {
   final String tweetId;
   CommentsPage({required this.tweetId});
 
@@ -17,13 +19,15 @@ class CommentsPage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final darkThemeMain = ref.watch(darkTheme);
+    final langMain = ref.watch(lang);
     final TextEditingController _controller = TextEditingController();
     final String currentUserId = auth.currentUser!.uid;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Comments'),
+        title: Text(langMain == "tr" ? "Yorumlar" : 'Comments'),
       ),
       body: Column(
         children: [
@@ -47,16 +51,44 @@ class CommentsPage extends StatelessWidget {
                   itemCount: comments.length,
                   itemBuilder: (context, index) {
                     final comment = comments[index];
+                    final commentData = comment.data() as Map<String, dynamic>;
+                    // Check if the comment contains a userId.
+                    if (!commentData.containsKey('userId')) {
+                      return Card(
+                        // Fallback UI for missing userId in comment.
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        elevation: 2,
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage:
+                                NetworkImage('https://picsum.photos/200'),
+                          ),
+                          title: Text('Unknown'),
+                          subtitle: Text(commentData['text']),
+                          trailing: Text(
+                            _timeAgo(commentData['timestamp']?.toDate() ??
+                                DateTime.now()),
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ),
+                      );
+                    }
                     return FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
                           .collection('users')
-                          .doc(comment['userId'])
+                          .doc(commentData['userId'])
                           .get(),
                       builder: (context, userSnapshot) {
                         if (userSnapshot.connectionState ==
                             ConnectionState.waiting) {
                           return ListTile(
-                            title: Text('Loading...'),
+                            title: Text(langMain == "tr"
+                                ? "Yükleniyor..."
+                                : 'Loading...'),
                           );
                         }
                         if (userSnapshot.hasError) {
@@ -92,7 +124,11 @@ class CommentsPage extends StatelessWidget {
                                   style: TextStyle(
                                       fontSize: 12, color: Colors.grey),
                                 ),
-                                if (comment['userId'] == currentUserId)
+                                if (((comment.data() as Map<String, dynamic>)
+                                        .containsKey('userId') &&
+                                    (comment.data() as Map<String, dynamic>)[
+                                            'userId'] ==
+                                        currentUserId))
                                   IconButton(
                                     icon: Icon(Icons.delete, color: Colors.red),
                                     onPressed: () {
@@ -128,9 +164,16 @@ class CommentsPage extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: TextField(
+                        style: TextStyle(
+                            color: darkThemeMain ? Colors.black : Colors.white),
                         controller: _controller,
                         decoration: InputDecoration(
-                          hintText: 'Add a comment...',
+                          hintStyle: TextStyle(
+                              color:
+                                  darkThemeMain ? Colors.black : Colors.white),
+                          hintText: langMain == "tr"
+                              ? "Bir yorum ekle..."
+                              : 'Add a comment...',
                           border: InputBorder.none,
                         ),
                       ),
@@ -138,7 +181,8 @@ class CommentsPage extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.send, color: Theme.of(context).primaryColor),
+                  icon: Icon(Icons.send,
+                      color: darkThemeMain ? Colors.white : Colors.black),
                   onPressed: () {
                     if (_controller.text.isNotEmpty) {
                       FirebaseFirestore.instance

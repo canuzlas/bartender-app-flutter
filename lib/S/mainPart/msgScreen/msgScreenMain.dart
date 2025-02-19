@@ -26,15 +26,18 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
     }
   }
 
-  Future<void> deleteMessage(String messageId) async {
+  // Updated deleteMessage method using non-sorted conversationId
+  Future<void> deleteMessage(String participantId) async {
     try {
+      final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+      final conversationId = "$currentUserId-$participantId";
       await FirebaseFirestore.instance
           .collection('messages')
-          .doc(messageId)
+          .doc(conversationId)
           .delete();
-      print("Message deleted successfully.");
+      print("Conversation deleted successfully.");
     } catch (e) {
-      print("Error deleting message: $e");
+      print("Error deleting conversation: $e");
     }
   }
 
@@ -47,13 +50,11 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
     );
   }
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     openMessagingPage(context, "9f5SxufrwzBD93QPg4Xv");
-  //   });
-  // }
+  Future<Map<String, dynamic>> getUserData(String userId) async {
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    return userDoc.data() ?? {};
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +64,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
     print("Current User ID: $currentUserId");
     return Scaffold(
       body: StreamBuilder<QuerySnapshot>(
+        // Filter only docs where current user is sender (to avoid duplicates)
         stream: FirebaseFirestore.instance
             .collection('messages')
             .where('senderId', isEqualTo: currentUserId)
@@ -87,115 +89,139 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
               .toList();
           final usersMap = <String, Map<String, dynamic>>{};
 
-          for (var message in messages) {
-            final messageData = message as Map<String, dynamic>;
-            final recipientId = messageData['recipientId'] ?? 'Unknown';
-            final senderId = messageData['senderId'] ?? 'Unknown';
-            final profilePhoto =
-                messageData['profilePhoto'] ?? 'assets/images/placeholder.png';
-            final sendername = messageData['sendername'] ?? 'Unknown';
-            final lastMessage = messageData['lastMessage'] ?? 'No message';
-            final timestamp = messageData['timestamp'] != null
-                ? (messageData['timestamp'] as Timestamp).toDate()
-                : DateTime.now();
-            if (!usersMap.containsKey(recipientId) ||
-                timestamp.compareTo(usersMap[recipientId]!['timestamp']) > 0) {
-              usersMap[recipientId] = {
-                'profilePhoto': profilePhoto,
-                'lastMessage': lastMessage,
-                'timestamp': timestamp,
-                'senderId': senderId,
-                'sendername': sendername,
-                'messageId': messageData['messageId'] ?? 'Unknown'
-              };
-            }
-          }
+          return FutureBuilder(
+            future: Future.wait(messages.map((message) async {
+              final messageData = message;
+              final participantId = currentUserId == messageData['senderId']
+                  ? messageData['recipientId']
+                  : messageData['senderId'];
+              final userData = await getUserData(participantId);
+              final profilePhoto =
+                  userData['photoURL'] ?? 'assets/images/placeholder.png';
+              final sendername = userData['displayname'] ?? 'Unknown';
+              final lastMessage = messageData['lastMessage'] ?? 'No message';
+              final timestamp = messageData['timestamp'] != null
+                  ? (messageData['timestamp'] as Timestamp).toDate()
+                  : DateTime.now();
+              if (!usersMap.containsKey(participantId) ||
+                  timestamp.compareTo(usersMap[participantId]!['timestamp']) >
+                      0) {
+                usersMap[participantId] = {
+                  'profilePhoto': profilePhoto,
+                  'lastMessage': lastMessage,
+                  'timestamp': timestamp,
+                  'senderId': messageData['senderId'] ?? 'Unknown',
+                  'sendername': sendername,
+                  'messageId': messageData['messageId'] ?? 'Unknown'
+                };
+              }
+            }).toList()),
+            builder: (context, AsyncSnapshot<void> userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
 
-          final usersList = usersMap.entries.toList()
-            ..sort(
-                (a, b) => b.value['timestamp'].compareTo(a.value['timestamp']));
+              if (userSnapshot.hasError) {
+                print("Error: ${userSnapshot.error}");
+                return Center(child: Text('An error occurred.'));
+              }
 
-          return ListView.builder(
-            itemCount: usersList.length,
-            itemBuilder: (context, index) {
-              final user = usersList[index];
-              final timestamp = user.value['timestamp'] as DateTime;
-              final timeAgoText = timeAgo(timestamp);
-              return Dismissible(
-                key: Key(user.value['messageId']),
-                direction: DismissDirection.endToStart,
-                onDismissed: (direction) {
-                  deleteMessage(user.value['messageId']);
-                },
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Icon(Icons.delete, color: Colors.white),
-                ),
-                child: GestureDetector(
-                  onTap: () => openMessagingPage(context, user.key),
-                  child: Card(
-                    margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage:
-                                user.value['profilePhoto'].startsWith('http')
+              final usersList = usersMap.entries.toList()
+                ..sort((a, b) =>
+                    b.value['timestamp'].compareTo(a.value['timestamp']));
+
+              return ListView.builder(
+                itemCount: usersList.length,
+                itemBuilder: (context, index) {
+                  final user = usersList[index];
+                  final timestamp = user.value['timestamp'] as DateTime;
+                  final timeAgoText = timeAgo(timestamp);
+                  return Dismissible(
+                    key: Key(user.value['messageId']),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (direction) {
+                      deleteMessage(user.key);
+                    },
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Icon(Icons.delete, color: Colors.white),
+                    ),
+                    child: GestureDetector(
+                      onTap: () => openMessagingPage(context, user.key),
+                      child: Card(
+                        margin:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundImage: user.value['profilePhoto'] !=
+                                            null &&
+                                        user.value['profilePhoto']
+                                            .startsWith('http')
                                     ? NetworkImage(user.value['profilePhoto'])
                                     : AssetImage('assets/openingPageDT.png')
                                         as ImageProvider,
-                            radius: 30,
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                radius: 30,
+                              ),
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      user.value['sendername'] != 'Unknown'
-                                          ? user.value['sendername']
-                                          : 'Unknown',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          user.value['sendername'] != null &&
+                                                  user.value['sendername'] !=
+                                                      'Unknown'
+                                              ? user.value['sendername']
+                                              : 'Unknown',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        Text(
+                                          timeAgoText,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                    SizedBox(height: 4),
                                     Text(
-                                      timeAgoText,
+                                      user.value['lastMessage'] != null &&
+                                              user.value['lastMessage'] !=
+                                                  'Unknown'
+                                          ? user.value['lastMessage']
+                                          : 'Unknown',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
+                                        fontSize: 14,
+                                        color: darkThemeMain
+                                            ? Colors.white
+                                            : Colors.black,
                                       ),
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  user.value['lastMessage'] != 'Unknown'
-                                      ? user.value['lastMessage']
-                                      : 'Unknown',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
           );

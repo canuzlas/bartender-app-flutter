@@ -1,12 +1,15 @@
+import 'package:bartender/S/mainPart/profileScreen/emojiesButtons.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:bartender/S/mainPart/discoverScreen/discoverScreenCommentsPage.dart';
+import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
 import 'package:bartender/S/mainPart/homeScreen/homeScreenController.dart';
+import 'package:bartender/S/mainPart/profileScreen/profileScreenController.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/scheduler.dart';
 
 class Profilescreenmain extends ConsumerStatefulWidget {
   const Profilescreenmain({super.key});
@@ -17,129 +20,27 @@ class Profilescreenmain extends ConsumerStatefulWidget {
 }
 
 class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
+  final ProfileScreenController _controller = ProfileScreenController();
   final FirebaseAuth auth = FirebaseAuth.instance;
-  late SharedPreferences sss;
 
   @override
   void initState() {
     super.initState();
-    _loadSharedPreferences();
-  }
-
-  Future<void> _loadSharedPreferences() async {
-    sss = await SharedPreferences.getInstance();
-  }
-
-  final HomeScreenController _controller = HomeScreenController();
-
-  Future<void> _toggleLike(String postId, bool isLiked) async {
-    final currentUser = auth.currentUser;
-    if (currentUser == null) return;
-
-    final postDoc = FirebaseFirestore.instance.collection('tweets').doc(postId);
-
-    if (isLiked) {
-      await postDoc.update({
-        'likedBy': FieldValue.arrayRemove([currentUser.uid]),
-      });
-    } else {
-      await postDoc.update({
-        'likedBy': FieldValue.arrayUnion([currentUser.uid]),
-      });
-    }
-  }
-
-  Future<void> _refreshPage() async {
-    setState(() {});
-  }
-
-  Future<void> _confirmLogout(BuildContext context) async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Logout'),
-        content: Text('Are you sure you want to log out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Logout'),
-          ),
-        ],
-      ),
-    );
-    if (shouldLogout == true) {
-      await FirebaseAuth.instance.signOut();
-      Navigator.pushNamedAndRemoveUntil(
-          context, '/loginScreen', (route) => false);
-    }
-  }
-
-  Future<void> _showSettingsDialog(BuildContext context) async {
-    final darkThemeMain = ref.watch(darkTheme);
-    final langMain = ref.watch(lang);
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Settings'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text('Theme'),
-              trailing: Switch(
-                value: darkThemeMain,
-                onChanged: (value) {
-                  sss.setBool("darkTheme", value);
-                  ref.read(darkTheme.notifier).state = value;
-                },
-              ),
-            ),
-            ListTile(
-              title: Text('Language'),
-              trailing: DropdownButton<String>(
-                value: langMain,
-                items: [
-                  DropdownMenuItem(
-                    value: 'en',
-                    child: Text('English'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'tr',
-                    child: Text('Turkish'),
-                  ),
-                ],
-                onChanged: (value) {
-                  sss.setString("lang", value.toString());
-                  ref.read(lang.notifier).state = value!;
-                },
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close'),
-          ),
-        ],
-      ),
-    );
+    _controller.loadSharedPreferences(ref);
   }
 
   @override
   Widget build(BuildContext context) {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
+    final selectedEmoji = ref.watch(selectedEmojiProvider);
 
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _refreshPage,
+          onRefresh: () async {
+            setState(() {});
+          },
           child: FutureBuilder<DocumentSnapshot>(
             future: FirebaseFirestore.instance
                 .collection('users')
@@ -166,12 +67,17 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        Text(
-                          "🍸 ${userData['displayname']}",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: darkThemeMain ? Colors.white : Colors.black,
+                        GestureDetector(
+                          onTap: () => _controller.showEmojiPicker(
+                              context, langMain, ref),
+                          child: Text(
+                            "$selectedEmoji ${userData['displayname']}",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  darkThemeMain ? Colors.white : Colors.black,
+                            ),
                           ),
                         ),
                         Spacer(),
@@ -186,9 +92,11 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                         PopupMenuButton<int>(
                           onSelected: (item) async {
                             if (item == 0) {
-                              await _showSettingsDialog(context);
+                              await _controller.showSettingsDialog(
+                                  context, ref);
                             } else if (item == 1) {
-                              await _confirmLogout(context);
+                              await _controller.confirmLogout(
+                                  context, langMain);
                             }
                           },
                           itemBuilder: (context) => [
@@ -197,9 +105,13 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                               child: Row(
                                 children: [
                                   Icon(CupertinoIcons.settings,
-                                      color: Colors.black),
+                                      color: darkThemeMain
+                                          ? Colors.white
+                                          : Colors.black),
                                   SizedBox(width: 8),
-                                  Text('Settings'),
+                                  Text(langMain == 'tr'
+                                      ? 'Ayarlar'
+                                      : 'Settings'),
                                 ],
                               ),
                             ),
@@ -207,9 +119,12 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                               value: 1,
                               child: Row(
                                 children: [
-                                  Icon(Icons.logout, color: Colors.black),
+                                  Icon(Icons.logout,
+                                      color: darkThemeMain
+                                          ? Colors.white
+                                          : Colors.black),
                                   SizedBox(width: 8),
-                                  Text('Logout'),
+                                  Text(langMain == 'tr' ? 'Çıkış' : 'Logout'),
                                 ],
                               ),
                             ),
@@ -297,12 +212,24 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                     darkThemeMain ? Colors.white : Colors.black,
                               ),
                             ),
-                            Text(
-                              langMain == "tr" ? "takipçi" : "follower",
-                              style: TextStyle(
-                                color: darkThemeMain
-                                    ? Colors.white70
-                                    : Colors.black87,
+                            GestureDetector(
+                              onTap: () {
+                                _controller.showUserListDialog(
+                                  context,
+                                  langMain == "tr" ? "Takipçiler" : "Followers",
+                                  List<String>.from(
+                                      userData['followers'] ?? []),
+                                  langMain,
+                                  ref,
+                                );
+                              },
+                              child: Text(
+                                langMain == "tr" ? "takipçi" : "follower",
+                                style: TextStyle(
+                                  color: darkThemeMain
+                                      ? Colors.white70
+                                      : Colors.black87,
+                                ),
                               ),
                             ),
                           ],
@@ -318,12 +245,25 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                     darkThemeMain ? Colors.white : Colors.black,
                               ),
                             ),
-                            Text(
-                              langMain == "tr" ? "takip" : "follow",
-                              style: TextStyle(
-                                color: darkThemeMain
-                                    ? Colors.white70
-                                    : Colors.black87,
+                            GestureDetector(
+                              onTap: () {
+                                _controller.showUserListDialog(
+                                    context,
+                                    langMain == "tr"
+                                        ? "Takip Edilenler"
+                                        : "Following",
+                                    List<String>.from(
+                                        userData['following'] ?? []),
+                                    langMain,
+                                    ref);
+                              },
+                              child: Text(
+                                langMain == "tr" ? "takip" : "follow",
+                                style: TextStyle(
+                                  color: darkThemeMain
+                                      ? Colors.white70
+                                      : Colors.black87,
+                                ),
                               ),
                             ),
                           ],
@@ -337,15 +277,6 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          userData['displayname'] ?? 'Unknown',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: darkThemeMain ? Colors.white : Colors.black,
-                          ),
-                        ),
-                        SizedBox(height: 5),
                         Text(
                           userData['bio'] ?? '',
                           style: TextStyle(
@@ -401,7 +332,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             child: TabBarView(
                               children: [
                                 RefreshIndicator(
-                                  onRefresh: _refreshPage,
+                                  onRefresh: () async {
+                                    setState(() {});
+                                  },
                                   child: StreamBuilder<QuerySnapshot>(
                                     stream: FirebaseFirestore.instance
                                         .collection('tweets')
@@ -487,8 +420,11 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                                                 : null,
                                                           ),
                                                           onPressed: () {
-                                                            _toggleLike(post.id,
-                                                                isLiked);
+                                                            _controller
+                                                                .toggleLike(
+                                                              post.id,
+                                                              isLiked,
+                                                            );
                                                           },
                                                         ),
                                                         Text(
@@ -549,7 +485,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                   ),
                                 ),
                                 RefreshIndicator(
-                                  onRefresh: _refreshPage,
+                                  onRefresh: () async {
+                                    setState(() {});
+                                  },
                                   child: FutureBuilder<QuerySnapshot>(
                                     future: FirebaseFirestore.instance
                                         .collection('tweets')
@@ -637,8 +575,11 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                                                 : null,
                                                           ),
                                                           onPressed: () {
-                                                            _toggleLike(post.id,
-                                                                isLiked);
+                                                            _controller
+                                                                .toggleLike(
+                                                              post.id,
+                                                              isLiked,
+                                                            );
                                                           },
                                                         ),
                                                         Text(
