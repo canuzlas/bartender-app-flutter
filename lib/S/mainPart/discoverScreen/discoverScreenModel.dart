@@ -9,12 +9,14 @@ class Tweet {
   List<String> likedBy;
   String userPhotoURL;
   String userName;
+  String postImageURL; // New field for post image URL
 
   Tweet(this.id, this.message, this.timestamp, this.userId,
       {this.likes = 0,
       this.likedBy = const [],
       this.userPhotoURL = '',
-      this.userName = ''});
+      this.userName = '',
+      this.postImageURL = ''}); // Default empty
 
   factory Tweet.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
@@ -27,6 +29,7 @@ class Tweet {
       likedBy: List<String>.from(data['likedBy'] ?? []),
       userPhotoURL: data['userPhotoURL'] ?? '',
       userName: data['userName'] ?? '',
+      postImageURL: data['photoURL'] ?? '', // Extract post image URL
     );
   }
 
@@ -39,6 +42,7 @@ class Tweet {
       'likedBy': likedBy,
       'userPhotoURL': userPhotoURL,
       'userName': userName,
+      'postImageURL': postImageURL, // Map the post image URL
     };
   }
 }

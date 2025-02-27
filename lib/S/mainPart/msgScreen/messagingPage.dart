@@ -1,3 +1,4 @@
+import 'package:bartender/S/mainPart/otherUserProfileScreen/otherUserProfileScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -309,19 +310,31 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
         ),
         title: recipientDataAsync.when(
           data: (data) {
-            return Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: data?['photoURL'] != null
-                      ? NetworkImage(data!['photoURL'])
-                      : null,
-                  child: data?['photoURL'] == null
-                      ? const Icon(Icons.person)
-                      : null,
-                ),
-                const SizedBox(width: 8),
-                Text(data?['displayname'] ?? "Chat"),
-              ],
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OtherUserProfileScreen(
+                      userId: widget.recipientId,
+                    ),
+                  ),
+                );
+              },
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: data?['photoURL'] != null
+                        ? NetworkImage(data!['photoURL'])
+                        : null,
+                    child: data?['photoURL'] == null
+                        ? const Icon(Icons.person)
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(data?['displayname'] ?? "Chat"),
+                ],
+              ),
             );
           },
           loading: () => const Text("Loading..."),

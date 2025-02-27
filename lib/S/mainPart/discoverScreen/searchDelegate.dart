@@ -54,13 +54,16 @@ class UserSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    final results = FirebaseFirestore.instance
-        .collection('users')
-        .where('displayname', isGreaterThanOrEqualTo: query)
-        .get();
+    if (query.isEmpty) return Container(); // Added empty-check
 
-    return FutureBuilder<QuerySnapshot>(
-      future: results,
+    final searchQuery = query.trim();
+    final resultsStream = FirebaseFirestore.instance
+        .collection('users')
+        .orderBy('displayname')
+        .startAt([searchQuery]).endAt([searchQuery + '\uf8ff']).snapshots();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: resultsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -104,13 +107,16 @@ class UserSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    final suggestions = FirebaseFirestore.instance
-        .collection('users')
-        .where('displayname', isGreaterThanOrEqualTo: query)
-        .get();
+    if (query.isEmpty) return Container(); // Added empty-check
 
-    return FutureBuilder<QuerySnapshot>(
-      future: suggestions,
+    final searchQuery = query.trim();
+    final suggestionsStream = FirebaseFirestore.instance
+        .collection('users')
+        .orderBy('displayname')
+        .startAt([searchQuery]).endAt([searchQuery + '\uf8ff']).snapshots();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: suggestionsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());

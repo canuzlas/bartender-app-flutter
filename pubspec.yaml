@@ -51,6 +51,8 @@ dependencies:
   intl: ^0.20.1
   share_plus: ^10.1.4
   firebase_database: ^11.3.0
+  firebase_storage: ^12.4.4
+  image_picker: ^1.1.2
 
 
 dev_dependencies:

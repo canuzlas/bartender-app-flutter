@@ -197,14 +197,37 @@ class OtherUserProfileScreen extends ConsumerWidget {
                               final tweet = tweets[index];
                               final tweetData =
                                   tweet.data() as Map<String, dynamic>;
-                              // Extract like and comment counts, defaulting to 0
                               final likeCount = tweetData['likes'] ?? 0;
                               final commentCount = tweetData['comments'] ?? 0;
+                              final postPhotoURL = tweetData['photoURL'];
                               return Card(
-                                margin: const EdgeInsets.all(8.0),
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 12.0, vertical: 6.0),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    if (postPhotoURL != null &&
+                                        postPhotoURL.toString().isNotEmpty)
+                                      ClipRRect(
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                                top: Radius.circular(12)),
+                                        child: Image.network(
+                                          postPhotoURL,
+                                          width: double.infinity,
+                                          height: 200,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error,
+                                                  stackTrace) =>
+                                              const SizedBox(
+                                                  height: 200,
+                                                  child: Center(
+                                                      child: Icon(
+                                                          Icons.broken_image))),
+                                        ),
+                                      ),
                                     ListTile(
                                       title: Text(tweetData['message'] ?? ''),
                                       subtitle: Text(
@@ -215,16 +238,62 @@ class OtherUserProfileScreen extends ConsumerWidget {
                                           horizontal: 16.0, vertical: 8.0),
                                       child: Row(
                                         children: [
-                                          IconButton(
-                                            icon: const Icon(
-                                                Icons.favorite_border),
-                                            onPressed: () async {
-                                              await tweet.reference.update({
-                                                'likes': FieldValue.increment(1)
-                                              });
+                                          // Retrieve current user and determine like state
+                                          Builder(
+                                            builder: (context) {
+                                              final currentUser = FirebaseAuth
+                                                  .instance.currentUser;
+                                              final likedBy =
+                                                  (tweetData['likedBy']
+                                                          as List<dynamic>?) ??
+                                                      [];
+                                              final isLiked =
+                                                  currentUser != null &&
+                                                      likedBy.contains(
+                                                          currentUser.uid);
+                                              return Row(
+                                                children: [
+                                                  IconButton(
+                                                    icon: Icon(
+                                                      isLiked
+                                                          ? Icons.favorite
+                                                          : Icons
+                                                              .favorite_border,
+                                                      color: isLiked
+                                                          ? Colors.red
+                                                          : null,
+                                                    ),
+                                                    onPressed: () async {
+                                                      if (currentUser == null)
+                                                        return;
+                                                      if (!isLiked) {
+                                                        await tweet.reference
+                                                            .update({
+                                                          'likes': FieldValue
+                                                              .increment(1),
+                                                          'likedBy': FieldValue
+                                                              .arrayUnion([
+                                                            currentUser.uid
+                                                          ])
+                                                        });
+                                                      } else {
+                                                        await tweet.reference
+                                                            .update({
+                                                          'likes': FieldValue
+                                                              .increment(-1),
+                                                          'likedBy': FieldValue
+                                                              .arrayRemove([
+                                                            currentUser.uid
+                                                          ])
+                                                        });
+                                                      }
+                                                    },
+                                                  ),
+                                                  Text('$likeCount'),
+                                                ],
+                                              );
                                             },
                                           ),
-                                          Text('$likeCount'),
                                           const SizedBox(width: 16),
                                           IconButton(
                                             icon: const Icon(

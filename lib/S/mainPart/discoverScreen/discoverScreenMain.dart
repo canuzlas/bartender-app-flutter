@@ -113,6 +113,16 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                         fontSize: 12, color: Colors.grey),
                                   ),
                                 ),
+                                // NEW: Show post image if available using the "postImageURL" field
+                                if (tweet.postImageURL.isNotEmpty)
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    child: Image.network(
+                                      tweet.postImageURL,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 16.0),
