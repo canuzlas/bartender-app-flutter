@@ -9,6 +9,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 final FirebaseAuth auth = FirebaseAuth.instance;
 
@@ -75,11 +77,26 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                 ListTile(
                                   leading: GestureDetector(
                                     onTap: () {
-                                      Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  OtherUserProfileScreen(
-                                                      userId: tweet.userId)));
+                                      if (FirebaseAuth
+                                                  .instance.currentUser?.uid !=
+                                              null &&
+                                          FirebaseAuth
+                                                  .instance.currentUser?.uid ==
+                                              tweet.userId) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'You cannot view your own profile'), // alert text
+                                          ),
+                                        );
+                                      } else {
+                                        Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    OtherUserProfileScreen(
+                                                        userId: tweet.userId)));
+                                      }
                                     },
                                     child: CircleAvatar(
                                       backgroundImage:
@@ -195,91 +212,6 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor:
-            darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              final TextEditingController _textController =
-                  TextEditingController();
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15.0),
-                ),
-                title: Text(
-                  langMain == "tr" ? 'Yeni Tweet' : 'New Tweet',
-                  style: TextStyle(
-                    color: darkThemeMain ? Colors.white : Colors.black,
-                  ),
-                ),
-                content: TextField(
-                  controller: _textController,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    hintText: langMain == "tr"
-                        ? 'Neler oluyor?'
-                        : 'What\'s happening?',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(
-                      langMain == "tr" ? 'İptal' : 'Cancel',
-                      style: TextStyle(
-                          color: darkThemeMain
-                              ? Colors.orangeAccent
-                              : Colors.deepOrange),
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      if (_textController.text.isNotEmpty) {
-                        final userId = auth.currentUser!.uid;
-                        FirebaseFirestore.instance.collection('tweets').add(
-                              Tweet('', _textController.text, DateTime.now(),
-                                      userId,
-                                      userPhotoURL:
-                                          auth.currentUser!.photoURL ?? '',
-                                      userName:
-                                          auth.currentUser!.displayName ?? '')
-                                  .toMap(),
-                            );
-                        Navigator.of(context).pop();
-                      }
-                    },
-                    icon: Icon(Icons.send, color: Colors.white),
-                    label: Text(
-                      langMain == "tr" ? 'Gönder' : 'Tweet',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: darkThemeMain
-                          ? Colors.orangeAccent
-                          : Colors.deepOrange,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-        child: Icon(
-          Icons.add,
-          color: Colors.white,
-        ),
-        mini: true,
       ),
     );
   }
