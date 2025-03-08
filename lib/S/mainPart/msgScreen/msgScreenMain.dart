@@ -72,16 +72,41 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return Center(
+                child: CircularProgressIndicator(
+              color: Colors.deepPurple,
+              strokeWidth: 3,
+            ));
           }
 
           if (snapshot.hasError) {
             print("Error: ${snapshot.error}");
-            return Center(child: Text('An error occurred.'));
+            return Center(
+                child: Text(
+              'An error occurred.',
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            ));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             print("No messages found.");
-            return Center(child: Text('No messages found.'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.message, size: 80, color: Colors.grey[400]),
+                  SizedBox(height: 16),
+                  Text(
+                    'No messages found',
+                    style: TextStyle(fontSize: 20, color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Your conversations will appear here',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            );
           }
 
           final messages = snapshot.data!.docs
@@ -131,6 +156,8 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                     b.value['timestamp'].compareTo(a.value['timestamp']));
 
               return ListView.builder(
+                physics: BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                 itemCount: usersList.length,
                 itemBuilder: (context, index) {
                   final user = usersList[index];
@@ -143,29 +170,71 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                       deleteMessage(user.key);
                     },
                     background: Container(
-                      color: Colors.red,
+                      margin: EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade800,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       alignment: Alignment.centerRight,
                       padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Icon(Icons.delete, color: Colors.white),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Delete',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.delete_forever, color: Colors.white),
+                        ],
+                      ),
                     ),
                     child: GestureDetector(
                       onTap: () => openMessagingPage(context, user.key),
-                      child: Card(
+                      child: Container(
                         margin:
-                            EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                            EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color:
+                              darkThemeMain ? Color(0xFF2A2A2A) : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              spreadRadius: 0,
+                              blurRadius: 10,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
                         child: Padding(
-                          padding: const EdgeInsets.all(8.0),
+                          padding: const EdgeInsets.all(12.0),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                backgroundImage: user.value['profilePhoto'] !=
-                                            null &&
-                                        user.value['profilePhoto']
-                                            .startsWith('http')
-                                    ? NetworkImage(user.value['profilePhoto'])
-                                    : AssetImage('assets/openingPageDT.png')
-                                        as ImageProvider,
-                                radius: 30,
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.deepPurple.withOpacity(0.2),
+                                      spreadRadius: 1,
+                                      blurRadius: 4,
+                                      offset: Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  backgroundImage: user.value['profilePhoto'] !=
+                                              null &&
+                                          user.value['profilePhoto']
+                                              .startsWith('http')
+                                      ? NetworkImage(user.value['profilePhoto'])
+                                      : AssetImage('assets/openingPageDT.png')
+                                          as ImageProvider,
+                                  radius: 30,
+                                ),
                               ),
                               SizedBox(width: 16),
                               Expanded(
@@ -184,19 +253,40 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                               : 'Unknown',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                            fontSize: 17,
+                                            color: darkThemeMain
+                                                ? Colors.white
+                                                : Colors.black87,
                                           ),
                                         ),
-                                        Text(
-                                          timeAgoText,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey,
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: darkThemeMain
+                                                ? Colors.deepPurple
+                                                    .withOpacity(0.2)
+                                                : Colors.deepPurple
+                                                    .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            timeAgoText,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: darkThemeMain
+                                                  ? Colors.grey[300]
+                                                  : Colors.deepPurple[700],
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 4),
+                                    SizedBox(height: 6),
                                     Text(
                                       user.value['lastMessage'] != null &&
                                               user.value['lastMessage'] !=
@@ -208,8 +298,8 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: darkThemeMain
-                                            ? Colors.white
-                                            : Colors.black,
+                                            ? Colors.grey[400]
+                                            : Colors.grey[700],
                                       ),
                                     ),
                                   ],

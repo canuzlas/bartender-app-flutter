@@ -2,6 +2,7 @@ import 'package:bartender/S/mainPart/otherUserProfileScreen/otherUserProfileScre
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -28,16 +29,44 @@ class MessagingPage extends ConsumerStatefulWidget {
   _MessagingPageState createState() => _MessagingPageState();
 }
 
-class _MessagingPageState extends ConsumerState<MessagingPage> {
+class _MessagingPageState extends ConsumerState<MessagingPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
   final CollectionReference _messagesRef =
       FirebaseFirestore.instance.collection('messages');
 
-  // List of emojis to react with
-  final List<String> _emojiOptions = ['👍', '❤️', '😂', '😮', '😢', '👏'];
-// New state variable to track open reaction area
+  // Animation controller for reaction effects
+  late AnimationController _reactionAnimController;
+  String? _lastReactedMessageId;
+
+  // List of emojis to react with - simplified back to basic format
+  final List<String> _emojiOptions = [
+    '👍',
+    '❤️',
+    '😂',
+    '😮',
+    '😢',
+    '👏',
+    '🔥',
+    '🙏'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _reactionAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  @override
+  void dispose() {
+    _reactionAnimController.dispose();
+    super.dispose();
+  }
 
   Future<void> _updateExistingDocuments(
       List<QueryDocumentSnapshot> docs, Map<String, dynamic> message) async {
@@ -202,90 +231,176 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
     }
   }
 
-  // New method to show emoji picker on double tap.
+  // Improved reaction picker UI
   void _showReactionPicker(
       Map<String, dynamic> message, String conversationId) {
-    showModalBottomSheet(
+    // Generate a unique ID for the message based on timestamp and content
+    final messageId =
+        "${(message['timestamp'] as Timestamp).seconds}-${message['content'].hashCode}";
+    _lastReactedMessageId = messageId;
+
+    showDialog(
       context: context,
       builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(16),
-          child: GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            children: _emojiOptions.map((emoji) {
-              return GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                  _updateMessageReaction(conversationId, message, emoji);
-                },
-                child: Center(
-                  child: Text(emoji, style: TextStyle(fontSize: 30)),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: EdgeInsets.zero,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.deepPurple.shade600,
+                  Colors.purpleAccent.shade400
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 15,
+                  spreadRadius: 0,
                 ),
-              );
-            }).toList(),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'React to this message',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  height: 70,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _emojiOptions.length,
+                    itemBuilder: (context, index) {
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          _updateMessageReaction(
+                              conversationId, message, _emojiOptions[index]);
+                          // Play animation
+                          _reactionAnimController.reset();
+                          _reactionAnimController.forward();
+                        },
+                        child: Container(
+                          width: 60,
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(_emojiOptions[index],
+                                style: TextStyle(fontSize: 30)),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  // Updated method to update reaction after performing all reads.
+  // Simplified and improved method to update reaction
   Future<void> _updateMessageReaction(String conversationId,
       Map<String, dynamic> targetMessage, String emoji) async {
-    final reverseConversationId = conversationId.split('-').reversed.join('-');
-    final conversationRef = _messagesRef.doc(conversationId);
-    final reverseRef = _messagesRef.doc(reverseConversationId);
+    try {
+      final reverseConversationId =
+          conversationId.split('-').reversed.join('-');
+      final conversationRef = _messagesRef.doc(conversationId);
+      final reverseRef = _messagesRef.doc(reverseConversationId);
 
-    await FirebaseFirestore.instance.runTransaction((transaction) async {
-      // Read both documents before doing any writes.
-      DocumentSnapshot snap1 = await transaction.get(conversationRef);
-      DocumentSnapshot snap2 = await transaction.get(reverseRef);
+      // Create a timestamp identifier for the message to match
+      final targetTimestamp = (targetMessage['timestamp'] as Timestamp).seconds;
+      final targetContent = targetMessage['content'];
 
-      // Prepare update for primary conversation doc if exists.
-      if (snap1.exists) {
-        final data = snap1.data() as Map<String, dynamic>;
-        List<dynamic> messages = data['messages'] ?? [];
-        List<dynamic> updatedMessages = messages.map((msg) {
-          if ((msg['timestamp'] as Timestamp).seconds ==
-                  (targetMessage['timestamp'] as Timestamp).seconds &&
-              msg['content'] == targetMessage['content']) {
-            return {
-              ...msg,
-              'reaction': emoji,
-            };
-          }
-          return msg;
-        }).toList();
-        transaction.update(conversationRef, {
-          'messages': updatedMessages,
-        });
+      // First document update
+      await _updateSingleConversation(
+          conversationRef, targetTimestamp, targetContent, emoji);
+
+      // Second document update - don't fail if this one doesn't work
+      try {
+        await _updateSingleConversation(
+            reverseRef, targetTimestamp, targetContent, emoji);
+      } catch (e) {
+        print("Error updating reverse conversation: $e");
+        // Non-critical error, continue
       }
 
-      // Prepare update for reverse conversation doc if exists.
-      if (snap2.exists) {
-        final data2 = snap2.data() as Map<String, dynamic>;
-        List<dynamic> messages2 = data2['messages'] ?? [];
-        List<dynamic> updatedMessages2 = messages2.map((msg) {
-          if ((msg['timestamp'] as Timestamp).seconds ==
-                  (targetMessage['timestamp'] as Timestamp).seconds &&
-              msg['content'] == targetMessage['content']) {
-            return {
-              ...msg,
-              'reaction': emoji,
-            };
-          }
-          return msg;
-        }).toList();
-        transaction.update(reverseRef, {
-          'messages': updatedMessages2,
-        });
+      // Trigger animation
+      _reactionAnimController.reset();
+      _reactionAnimController.forward();
+    } catch (e) {
+      print("Error in _updateMessageReaction: $e");
+    }
+  }
+
+  // Helper method to update a single conversation document
+  Future<void> _updateSingleConversation(DocumentReference docRef,
+      int targetTimestamp, String targetContent, String emoji) async {
+    // Get the document first
+    final docSnapshot = await docRef.get();
+    if (!docSnapshot.exists) return;
+
+    final data = docSnapshot.data() as Map<String, dynamic>;
+    final List<dynamic> messages = List.from(data['messages'] ?? []);
+
+    // Find and update the message
+    bool updated = false;
+    for (int i = 0; i < messages.length; i++) {
+      final msg = messages[i];
+      if (msg is Map<String, dynamic>) {
+        final timestamp = msg['timestamp'];
+        if (timestamp is Timestamp &&
+            timestamp.seconds == targetTimestamp &&
+            msg['content'] == targetContent) {
+          // Update the message with the reaction
+          messages[i] = {...msg, 'reaction': emoji};
+          updated = true;
+          break;
+        }
       }
-    }).catchError((e) {
-      print("Error updating message reaction: $e");
-    });
+    }
+
+    // Only update if we found and modified the message
+    if (updated) {
+      await docRef.update({'messages': messages});
+    }
   }
 
   @override
@@ -298,15 +413,23 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
 
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
         backgroundColor: Colors.transparent,
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.deepPurple, Colors.purpleAccent],
+              colors: [
+                Colors.deepPurple.shade800,
+                Colors.purpleAccent.shade700
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
         title: recipientDataAsync.when(
           data: (data) {
@@ -323,226 +446,526 @@ class _MessagingPageState extends ConsumerState<MessagingPage> {
               },
               child: Row(
                 children: [
-                  CircleAvatar(
-                    backgroundImage: data?['photoURL'] != null
-                        ? NetworkImage(data!['photoURL'])
-                        : null,
-                    child: data?['photoURL'] == null
-                        ? const Icon(Icons.person)
-                        : null,
+                  Hero(
+                    tag: 'profile-${widget.recipientId}',
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.6),
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.grey[300],
+                        backgroundImage: data?['photoURL'] != null
+                            ? NetworkImage(data!['photoURL'])
+                            : null,
+                        child: data?['photoURL'] == null
+                            ? Icon(Icons.person, color: Colors.grey[700])
+                            : null,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(data?['displayname'] ?? "Chat"),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          data?['displayname'] ?? "Chat",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Online',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );
           },
-          loading: () => const Text("Loading..."),
-          error: (_, __) => const Text("Chat"),
+          loading: () => Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 10),
+              Text(
+                "Loading...",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          error: (_, __) => const Text(
+            "Chat",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete),
+            icon: Container(
+              padding: EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.delete, color: Colors.white, size: 20),
+            ),
             onPressed: deleteAllMessages,
+          ),
+          IconButton(
+            icon: Container(
+              padding: EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.info_outline, color: Colors.white, size: 20),
+            ),
+            onPressed: () {},
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // ...existing code for recipient widget...
-          Expanded(
-            child: StreamBuilder<DocumentSnapshot>(
-              stream: _messagesRef.doc(conversationId).snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  print("Error: ${snapshot.error}");
-                  return const Center(child: Text('An error occurred.'));
-                }
-                if (!snapshot.hasData || !(snapshot.data!.exists)) {
-                  return const Center(child: Text('No messages found.'));
-                }
-                try {
-                  final data = snapshot.data!.data() as Map<String, dynamic>;
-                  final messages = (data['messages'] as List<dynamic>? ?? []);
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.grey.shade100,
+              Colors.grey.shade200,
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
+            // ...existing code for recipient widget...
+            Expanded(
+              child: StreamBuilder<DocumentSnapshot>(
+                stream: _messagesRef.doc(conversationId).snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.deepPurple,
+                        strokeWidth: 3,
+                      ),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    print("Error: ${snapshot.error}");
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.error_outline,
+                              size: 60, color: Colors.grey[500]),
+                          SizedBox(height: 16),
+                          Text(
+                            'An error occurred',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  if (!snapshot.hasData || !(snapshot.data!.exists)) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chat_bubble_outline,
+                              size: 80, color: Colors.grey[400]),
+                          SizedBox(height: 16),
+                          Text(
+                            'No messages yet',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Start a conversation!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  try {
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    final messages = (data['messages'] as List<dynamic>? ?? []);
 
-                  messages.sort((a, b) {
-                    final timeA = (a['timestamp'] as Timestamp).toDate();
-                    final timeB = (b['timestamp'] as Timestamp).toDate();
-                    return timeA.compareTo(timeB);
-                  });
+                    messages.sort((a, b) {
+                      final timeA = (a['timestamp'] as Timestamp).toDate();
+                      final timeB = (b['timestamp'] as Timestamp).toDate();
+                      return timeA.compareTo(timeB);
+                    });
 
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _scrollToBottom();
-                  });
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToBottom();
+                    });
 
-                  return ListView.builder(
-                    controller: _scrollController,
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final message = messages[index] as Map<String, dynamic>;
-                      // Convert senderId to String and compare directly.
-                      final String senderId = message['senderId'].toString();
-                      final bool isMe = senderId == currentUserId;
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      physics: BouncingScrollPhysics(),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final message = messages[index] as Map<String, dynamic>;
+                        // Convert senderId to String and compare directly.
+                        final String senderId = message['senderId'].toString();
+                        final bool isMe = senderId == currentUserId;
 
-                      final messageText = message['content'] ?? 'No message';
-                      final timestamp = message['timestamp'] != null
-                          ? (message['timestamp'] as Timestamp).toDate()
-                          : DateTime.now();
+                        final messageText = message['content'] ?? 'No message';
+                        final timestamp = message['timestamp'] != null
+                            ? (message['timestamp'] as Timestamp).toDate()
+                            : DateTime.now();
 
-                      // Wrap message bubble with GestureDetector for double tap.
-                      return GestureDetector(
-                        onDoubleTap: () {
-                          _showReactionPicker(message, conversationId);
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 4.0, horizontal: 8.0),
-                          child: Align(
-                            alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Column(
-                              crossAxisAlignment: isMe
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Stack(
-                                  children: [
-                                    Container(
-                                      constraints: BoxConstraints(
-                                        maxWidth:
-                                            MediaQuery.of(context).size.width *
-                                                0.7,
+                        // Group messages by date
+                        bool showDateHeader = false;
+                        if (index == 0) {
+                          showDateHeader = true;
+                        } else {
+                          final prevTimestamp = messages[index - 1]
+                                      ['timestamp'] !=
+                                  null
+                              ? (messages[index - 1]['timestamp'] as Timestamp)
+                                  .toDate()
+                              : DateTime.now();
+
+                          if (timestamp.day != prevTimestamp.day ||
+                              timestamp.month != prevTimestamp.month ||
+                              timestamp.year != prevTimestamp.year) {
+                            showDateHeader = true;
+                          }
+                        }
+
+                        // Wrap message bubble with GestureDetector for reaction
+                        return Column(
+                          children: [
+                            if (showDateHeader)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16.0),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.7),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 4,
+                                        spreadRadius: 0,
                                       ),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 10, horizontal: 15),
-                                      decoration: BoxDecoration(
-                                        gradient: isMe
-                                            ? const LinearGradient(
-                                                colors: [
-                                                  Colors.deepPurple,
-                                                  Colors.purpleAccent
-                                                ],
-                                              )
-                                            : LinearGradient(
-                                                colors: [
-                                                  Colors.teal.shade200,
-                                                  Colors.teal.shade400
-                                                ],
+                                    ],
+                                  ),
+                                  child: Text(
+                                    DateFormat('MMMM d, yyyy')
+                                        .format(timestamp),
+                                    style: TextStyle(
+                                      color: Colors.grey[800],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            GestureDetector(
+                              onDoubleTap: () {
+                                HapticFeedback.mediumImpact();
+                                _showReactionPicker(message, conversationId);
+                              },
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4.0),
+                                child: Align(
+                                  alignment: isMe
+                                      ? Alignment.centerRight
+                                      : Alignment.centerLeft,
+                                  child: Column(
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Stack(
+                                        children: [
+                                          Container(
+                                            constraints: BoxConstraints(
+                                              maxWidth: MediaQuery.of(context)
+                                                      .size
+                                                      .width *
+                                                  0.75,
+                                            ),
+                                            margin: EdgeInsets.only(
+                                              left: isMe ? 50 : 0,
+                                              right: isMe ? 0 : 50,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              gradient: isMe
+                                                  ? LinearGradient(
+                                                      begin: Alignment.topLeft,
+                                                      end:
+                                                          Alignment.bottomRight,
+                                                      colors: [
+                                                        Colors.deepPurple
+                                                            .shade700,
+                                                        Colors.deepPurple
+                                                            .shade900,
+                                                      ],
+                                                    )
+                                                  : LinearGradient(
+                                                      begin: Alignment.topLeft,
+                                                      end:
+                                                          Alignment.bottomRight,
+                                                      colors: [
+                                                        Colors.white,
+                                                        Colors.grey.shade100,
+                                                      ],
+                                                    ),
+                                              borderRadius: BorderRadius.only(
+                                                topLeft: Radius.circular(18),
+                                                topRight: Radius.circular(18),
+                                                bottomLeft: isMe
+                                                    ? Radius.circular(18)
+                                                    : Radius.circular(4),
+                                                bottomRight: isMe
+                                                    ? Radius.circular(4)
+                                                    : Radius.circular(18),
                                               ),
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: const Radius.circular(12),
-                                          topRight: const Radius.circular(12),
-                                          bottomLeft: isMe
-                                              ? const Radius.circular(12)
-                                              : const Radius.circular(0),
-                                          bottomRight: isMe
-                                              ? const Radius.circular(0)
-                                              : const Radius.circular(12),
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.15),
-                                            blurRadius: 6,
-                                            offset: const Offset(2, 2),
-                                          )
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: isMe
+                                                      ? Colors.deepPurple
+                                                          .withOpacity(0.3)
+                                                      : Colors.black
+                                                          .withOpacity(0.05),
+                                                  blurRadius: 8,
+                                                  spreadRadius: 0,
+                                                  offset: const Offset(0, 3),
+                                                )
+                                              ],
+                                            ),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(12),
+                                                  child: Text(
+                                                    messageText,
+                                                    style: TextStyle(
+                                                      color: isMe
+                                                          ? Colors.white
+                                                          : Colors.black87,
+                                                      fontSize: 16,
+                                                      height: 1.3,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (message['reaction'] != null)
+                                                  Positioned(
+                                                    bottom: -16,
+                                                    right: isMe ? null : -2,
+                                                    left: isMe ? -2 : null,
+                                                    child: AnimatedBuilder(
+                                                      animation:
+                                                          _reactionAnimController,
+                                                      builder:
+                                                          (context, child) {
+                                                        final scale = _lastReactedMessageId ==
+                                                                    "${(message['timestamp'] as Timestamp).seconds}-${message['content'].hashCode}" &&
+                                                                _reactionAnimController
+                                                                    .isAnimating
+                                                            ? 1.0 +
+                                                                _reactionAnimController
+                                                                        .value *
+                                                                    0.5
+                                                            : 1.0;
+
+                                                        return Transform.scale(
+                                                          scale: scale,
+                                                          child: Container(
+                                                            padding:
+                                                                EdgeInsets.all(
+                                                                    4),
+                                                            child: Text(
+                                                              message[
+                                                                  'reaction'],
+                                                              style: TextStyle(
+                                                                  fontSize: 20),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
                                         ],
                                       ),
-                                      child: Text(
-                                        messageText,
-                                        style: TextStyle(
-                                          color: isMe
-                                              ? Colors.white
-                                              : Colors.black,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                          left: 4,
+                                          right: 4,
+                                        ),
+                                        child: Text(
+                                          DateFormat('h:mm a')
+                                              .format(timestamp),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (message['reaction'] != null)
-                                      Text(
-                                        message['reaction'],
-                                        style: const TextStyle(
-                                            fontSize: 14, color: Colors.grey),
-                                      ),
-                                    if (message['reaction'] != null)
-                                      const SizedBox(width: 4),
-                                    Text(
-                                      DateFormat('hh:mm a').format(timestamp),
-                                      style: const TextStyle(
-                                          fontSize: 12, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  } catch (e) {
+                    print("Error processing messages: $e");
+                    return const Center(child: Text('An error occurred.'));
+                  }
+                },
+              ),
+            ),
+            // ...existing code for message input field...
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    spreadRadius: 0,
+                    blurRadius: 10,
+                    offset: Offset(0, -3),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(12.0),
+              child: SafeArea(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.grey.shade100,
+                        Colors.grey.shade200,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.emoji_emotions_outlined,
+                            color: Colors.deepPurple.shade300),
+                        onPressed: () {}, // Placeholder for emoji picker
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: TextField(
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontSize: 16,
+                            ),
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Type a message...',
+                              hintStyle: TextStyle(color: Colors.black54),
+                              border: InputBorder.none,
+                              contentPadding:
+                                  EdgeInsets.symmetric(horizontal: 8),
                             ),
                           ),
                         ),
-                      );
-                    },
-                  );
-                } catch (e) {
-                  print("Error processing messages: $e");
-                  return const Center(child: Text('An error occurred.'));
-                }
-              },
-            ),
-          ),
-          // ...existing code for message input field...
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey.withOpacity(0.3),
-                  width: 1,
-                ),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(2, 2))
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: TextField(
-                        style:
-                            const TextStyle(color: Colors.black, fontSize: 16),
-                        controller: _messageController,
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          hintStyle: TextStyle(color: Colors.black54),
-                          border: InputBorder.none,
+                      ),
+                      Container(
+                        margin: EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.deepPurple.shade600,
+                              Colors.purpleAccent.shade700,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.send_rounded, color: Colors.white),
+                          onPressed: sendMessage,
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Colors.blue),
-                    onPressed: sendMessage,
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-          const SafeArea(child: SizedBox(height: 10)),
-        ],
+          ],
+        ),
       ),
     );
   }

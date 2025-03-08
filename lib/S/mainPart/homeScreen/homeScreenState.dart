@@ -71,15 +71,48 @@ class LikeNotifier extends StateNotifier<bool> {
   }
 }
 
+// Add a theme provider to control app appearance consistently
+final appThemeProvider = StateProvider<AppTheme>((ref) {
+  return AppTheme.light;
+});
+
+enum AppTheme { light, dark, system }
+
+// Add animation state provider
+final animationProvider = StateProvider<bool>((ref) {
+  return true; // Animation enabled by default
+});
+
+// Add refresh state provider to track when content is being refreshed
+final isRefreshingProvider = StateProvider<bool>((ref) {
+  return false;
+});
+
+// Enhanced NewPostState with additional properties
 class NewPostState {
   final File? selectedImage;
   final bool isUploading;
-  const NewPostState({this.selectedImage, this.isUploading = false});
+  final double uploadProgress;
+  final String? errorMessage;
 
-  NewPostState copyWith({File? selectedImage, bool? isUploading}) {
+  const NewPostState({
+    this.selectedImage,
+    this.isUploading = false,
+    this.uploadProgress = 0.0,
+    this.errorMessage,
+  });
+
+  NewPostState copyWith({
+    File? selectedImage,
+    bool? isUploading,
+    double? uploadProgress,
+    String? errorMessage,
+  }) {
     return NewPostState(
       selectedImage: selectedImage ?? this.selectedImage,
       isUploading: isUploading ?? this.isUploading,
+      uploadProgress: uploadProgress ?? this.uploadProgress,
+      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 }
@@ -97,6 +130,14 @@ class NewPostNotifier extends StateNotifier<NewPostState> {
 
   void setUploading(bool value) {
     state = state.copyWith(isUploading: value);
+  }
+
+  void setUploadProgress(double value) {
+    state = state.copyWith(uploadProgress: value);
+  }
+
+  void setErrorMessage(String? message) {
+    state = state.copyWith(errorMessage: message);
   }
 
   void reset() {
