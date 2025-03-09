@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+// Import packages for GIF support
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 // Define a provider to fetch recipient data
 final recipientDataProvider =
@@ -53,6 +56,14 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
     '🙏'
   ];
 
+  // GIF-related variables
+  bool _isLoading = false;
+  List<String> _gifs = [];
+  final String _gifApiKey =
+      'jQvRAGPsXaXoATFjA2BGc5IE3z9XZDru'; // Replace with your Giphy API key
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -60,12 +71,576 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
+    // Pre-load some trending GIFs
+    _fetchTrendingGifs();
   }
 
   @override
   void dispose() {
     _reactionAnimController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  // Method to fetch trending GIFs
+  Future<void> _fetchTrendingGifs() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'https://api.giphy.com/v1/gifs/trending?api_key=$_gifApiKey&limit=20&rating=g'),
+        headers: {
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['data'] != null && data['data'] is List) {
+          setState(() {
+            _gifs = (data['data'] as List)
+                .map((gif) => gif['images']['fixed_height']['url'].toString())
+                .toList();
+            _isLoading = false;
+          });
+          print('Loaded ${_gifs.length} trending GIFs');
+        } else {
+          print('Invalid data format from Giphy API');
+          setState(() {
+            _gifs = [];
+            _isLoading = false;
+          });
+        }
+      } else {
+        print('Failed to load trending GIFs: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching trending GIFs: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Method to search for GIFs
+  Future<void> _searchGifs(String query) async {
+    if (query.isEmpty) {
+      _fetchTrendingGifs();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _searchQuery = query;
+    });
+
+    try {
+      // Encode the query to handle spaces and special characters
+      final encodedQuery = Uri.encodeComponent(query);
+      final response = await http.get(
+        Uri.parse(
+            'https://api.giphy.com/v1/gifs/search?api_key=$_gifApiKey&q=$encodedQuery&limit=20&rating=g'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['data'] != null &&
+            data['data'] is List &&
+            (data['data'] as List).isNotEmpty) {
+          setState(() {
+            _gifs = (data['data'] as List)
+                .map((gif) => gif['images']['fixed_height']['url'].toString())
+                .toList();
+            _isLoading = false;
+          });
+        } else {
+          print('No GIFs found for query: $query');
+          setState(() {
+            _gifs = [];
+            _isLoading = false;
+          });
+        }
+      } else {
+        print('Failed to search GIFs: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error searching GIFs: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Method to show GIF picker
+  void _showGifPicker() {
+    // Create local state variables for the modal
+    bool isLoading = true;
+    List<String> gifs = [];
+    String searchQuery = '';
+    TextEditingController searchController = TextEditingController();
+
+    // Function to fetch trending GIFs specifically for the modal
+    Future<void> fetchTrendingGifs(StateSetter setModalState) async {
+      setModalState(() {
+        isLoading = true;
+      });
+
+      try {
+        final response = await http.get(
+          Uri.parse(
+              'https://api.giphy.com/v1/gifs/trending?api_key=$_gifApiKey&limit=20&rating=g'),
+          headers: {
+            'Accept': 'application/json',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['data'] != null && data['data'] is List) {
+            setModalState(() {
+              gifs = (data['data'] as List)
+                  .map((gif) => gif['images']['fixed_height']['url'].toString())
+                  .toList();
+              isLoading = false;
+            });
+            print('Loaded ${gifs.length} trending GIFs');
+          } else {
+            print('Invalid data format from Giphy API');
+            setModalState(() {
+              gifs = [];
+              isLoading = false;
+            });
+          }
+        } else {
+          print('Failed to load trending GIFs: ${response.statusCode}');
+          print('Response body: ${response.body}');
+          setModalState(() {
+            isLoading = false;
+          });
+        }
+      } catch (e) {
+        print('Error fetching trending GIFs: $e');
+        setModalState(() {
+          isLoading = false;
+        });
+      }
+    }
+
+    // Function to search GIFs specifically for the modal
+    Future<void> searchGifsModal(
+        String query, StateSetter setModalState) async {
+      if (query.isEmpty) {
+        fetchTrendingGifs(setModalState);
+        return;
+      }
+
+      setModalState(() {
+        isLoading = true;
+        searchQuery = query;
+      });
+
+      try {
+        // Encode the query to handle spaces and special characters
+        final encodedQuery = Uri.encodeComponent(query);
+        final response = await http.get(
+          Uri.parse(
+              'https://api.giphy.com/v1/gifs/search?api_key=$_gifApiKey&q=$encodedQuery&limit=20&rating=g'),
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['data'] != null &&
+              data['data'] is List &&
+              (data['data'] as List).isNotEmpty) {
+            setModalState(() {
+              gifs = (data['data'] as List)
+                  .map((gif) => gif['images']['fixed_height']['url'].toString())
+                  .toList();
+              isLoading = false;
+            });
+          } else {
+            print('No GIFs found for query: $query');
+            setModalState(() {
+              gifs = [];
+              isLoading = false;
+            });
+          }
+        } else {
+          print('Failed to search GIFs: ${response.statusCode}');
+          print('Response body: ${response.body}');
+          setModalState(() {
+            isLoading = false;
+          });
+        }
+      } catch (e) {
+        print('Error searching GIFs: $e');
+        setModalState(() {
+          isLoading = false;
+        });
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setModalState) {
+          // Initial fetch when the modal is opened
+          if (isLoading && gifs.isEmpty) {
+            fetchTrendingGifs(setModalState);
+          }
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.deepPurple.shade600,
+                        Colors.purpleAccent.shade700,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Select a GIF',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: TextField(
+                          controller: searchController,
+                          style: TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Search GIFs...',
+                            hintStyle: TextStyle(color: Colors.white70),
+                            prefixIcon:
+                                Icon(Icons.search, color: Colors.white70),
+                            suffixIcon: searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.clear,
+                                        color: Colors.white70),
+                                    onPressed: () {
+                                      searchController.clear();
+                                      fetchTrendingGifs(setModalState);
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                          onSubmitted: (value) {
+                            if (value.isNotEmpty) {
+                              searchGifsModal(value, setModalState);
+                            }
+                          },
+                          textInputAction: TextInputAction.search,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: isLoading
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                color: Colors.deepPurple,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'Loading GIFs...',
+                                style: TextStyle(
+                                  color: Colors.deepPurple,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              )
+                            ],
+                          ),
+                        )
+                      : gifs.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.sentiment_dissatisfied,
+                                    size: 48,
+                                    color: Colors.grey[400],
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    searchController.text.isEmpty
+                                        ? 'No trending GIFs available'
+                                        : 'No GIFs found for "${searchController.text}"',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  SizedBox(height: 20),
+                                  if (searchController.text.isNotEmpty)
+                                    TextButton(
+                                      onPressed: () {
+                                        searchController.clear();
+                                        fetchTrendingGifs(setModalState);
+                                      },
+                                      child: Text(
+                                        'Show trending GIFs',
+                                        style: TextStyle(
+                                          color: Colors.deepPurple,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () async {
+                                if (searchController.text.isEmpty) {
+                                  await fetchTrendingGifs(setModalState);
+                                } else {
+                                  await searchGifsModal(
+                                      searchController.text, setModalState);
+                                }
+                              },
+                              child: GridView.builder(
+                                padding: EdgeInsets.all(12),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 1.0,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                ),
+                                itemCount: gifs.length,
+                                itemBuilder: (context, index) {
+                                  return InkWell(
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      _sendGifMessage(gifs[index]);
+                                    },
+                                    child: Card(
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            Image.network(
+                                              gifs[index],
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child,
+                                                  loadingProgress) {
+                                                if (loadingProgress == null) {
+                                                  return child;
+                                                }
+                                                return Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    value: loadingProgress
+                                                                .expectedTotalBytes !=
+                                                            null
+                                                        ? loadingProgress
+                                                                .cumulativeBytesLoaded /
+                                                            loadingProgress
+                                                                .expectedTotalBytes!
+                                                        : null,
+                                                    color: Colors.deepPurple,
+                                                    strokeWidth: 2,
+                                                  ),
+                                                );
+                                              },
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                print(
+                                                    'Error loading GIF at index $index: $error');
+                                                return Container(
+                                                  color: Colors.grey[300],
+                                                  child: Center(
+                                                    child: Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                            // Add an overlay effect when pressed
+                                            Positioned.fill(
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  splashColor: Colors
+                                                      .purpleAccent
+                                                      .withOpacity(0.3),
+                                                  onTap: () {
+                                                    Navigator.pop(context);
+                                                    _sendGifMessage(
+                                                        gifs[index]);
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                ),
+              ],
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  // Method to send a GIF message
+  Future<void> _sendGifMessage(String gifUrl) async {
+    // Ensure IDs are stored as strings
+    final senderMessage = {
+      'senderId': currentUserId.toString(),
+      'recipientId': widget.recipientId.toString(),
+      'content': 'GIF',
+      'gifUrl': gifUrl,
+      'timestamp': Timestamp.now(),
+      'isRead': false,
+      'isSent': true,
+      'isGif': true,
+    };
+
+    final recipientMessage = {
+      'senderId': currentUserId.toString(),
+      'recipientId': widget.recipientId.toString(),
+      'content': 'GIF',
+      'gifUrl': gifUrl,
+      'timestamp': Timestamp.now(),
+      'isRead': false,
+      'isSent': true,
+      'isGif': true,
+    };
+
+    final conversationIdSender = "$currentUserId-${widget.recipientId}";
+    final conversationIdRecipient = "${widget.recipientId}-$currentUserId";
+    final conversationRefSender = _messagesRef.doc(conversationIdSender);
+    final conversationRefRecipient = _messagesRef.doc(conversationIdRecipient);
+
+    try {
+      // Save sender's message
+      final senderSnap = await conversationRefSender.get();
+      if (senderSnap.exists) {
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          final freshSnap = await transaction.get(conversationRefSender);
+          transaction.update(freshSnap.reference, {
+            'messages': FieldValue.arrayUnion([senderMessage]),
+            'lastMessage': 'GIF',
+            'timestamp': senderMessage['timestamp'],
+          });
+        });
+      } else {
+        await conversationRefSender.set({
+          'senderId': currentUserId,
+          'recipientId': widget.recipientId,
+          'messages': [senderMessage],
+          'lastMessage': 'GIF',
+          'timestamp': senderMessage['timestamp'],
+          'participants': [currentUserId, widget.recipientId],
+        });
+      }
+
+      // Save recipient's message
+      final recipientSnap = await conversationRefRecipient.get();
+      if (recipientSnap.exists) {
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          final freshSnap = await transaction.get(conversationRefRecipient);
+          transaction.update(freshSnap.reference, {
+            'messages': FieldValue.arrayUnion([recipientMessage]),
+            'lastMessage': 'GIF',
+            'timestamp': recipientMessage['timestamp'],
+          });
+        });
+      } else {
+        await conversationRefRecipient.set({
+          'senderId': widget.recipientId,
+          'recipientId': currentUserId,
+          'messages': [recipientMessage],
+          'lastMessage': 'GIF',
+          'timestamp': recipientMessage['timestamp'],
+          'participants': [widget.recipientId, currentUserId],
+        });
+      }
+
+      _scrollToBottom();
+    } catch (e) {
+      print("Error sending GIF message: $e");
+    }
   }
 
   Future<void> _updateExistingDocuments(
@@ -219,15 +794,68 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
     });
   }
 
-  void deleteAllMessages() async {
+  Future<void> deleteAllMessages() async {
     try {
+      // Show a confirmation dialog
+      bool confirm = await showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Delete Conversation'),
+                content:
+                    Text('Are you sure you want to delete this conversation?'),
+                actions: <Widget>[
+                  TextButton(
+                    child: Text('Cancel'),
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                  TextButton(
+                    child: Text(
+                      'Delete',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(true),
+                  ),
+                ],
+              );
+            },
+          ) ??
+          false;
+
+      if (!confirm) return;
+
       final conversationIdSender = "$currentUserId-${widget.recipientId}";
-      // Removed deletion for the recipient's conversation document.
-      await _messagesRef.doc(conversationIdSender).delete();
-      print(
-          "Messages for conversation $conversationIdSender deleted successfully");
+
+      // Try to delete recipient's conversation document but don't fail if it doesn't exist
+      try {
+        await _messagesRef.doc(conversationIdSender).delete();
+      } catch (e) {
+        print("Note: Could not delete recipient conversation: $e");
+        // This is non-critical, so continue execution
+      }
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Conversation deleted successfully'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      // Navigate back after deletion
+      Navigator.pop(context);
     } catch (e) {
       print("Error deleting messages: $e");
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete conversation: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -574,7 +1202,10 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
             // ...existing code for recipient widget...
             Expanded(
               child: StreamBuilder<DocumentSnapshot>(
-                stream: _messagesRef.doc(conversationId).snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('messages')
+                    .doc("$currentUserId-${widget.recipientId}")
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(
@@ -606,31 +1237,77 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                     );
                   }
                   if (!snapshot.hasData || !(snapshot.data!.exists)) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.chat_bubble_outline,
-                              size: 80, color: Colors.grey[400]),
-                          SizedBox(height: 16),
-                          Text(
-                            'No messages yet',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Start a conversation!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
+                    return StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('messages')
+                          .doc("${widget.recipientId}-$currentUserId")
+                          .snapshots(),
+                      builder: (context, secondSnapshot) {
+                        if (secondSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator());
+                        }
+
+                        if (!secondSnapshot.hasData ||
+                            !secondSnapshot.data!.exists) {
+                          return Center(child: Text('No messages yet'));
+                        }
+
+                        var data = secondSnapshot.data!.data()
+                            as Map<String, dynamic>?;
+                        if (data == null || !data.containsKey('messageList')) {
+                          return Center(child: Text('Start a conversation'));
+                        }
+
+                        var messageList = List<Map<String, dynamic>>.from(
+                            data['messageList'] ?? []);
+
+                        // Sort messages by timestamp
+                        messageList.sort((a, b) {
+                          var aTimestamp = a['timestamp'] as Timestamp;
+                          var bTimestamp = b['timestamp'] as Timestamp;
+                          return aTimestamp.compareTo(bTimestamp);
+                        });
+
+                        return ListView.builder(
+                          reverse: false,
+                          itemCount: messageList.length,
+                          padding: EdgeInsets.all(16),
+                          itemBuilder: (context, index) {
+                            var message = messageList[index];
+                            bool isCurrentUser =
+                                message['senderId'] == currentUserId;
+
+                            return Align(
+                              alignment: isCurrentUser
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: Container(
+                                margin: EdgeInsets.only(
+                                  bottom: 8,
+                                  left: isCurrentUser ? 64 : 0,
+                                  right: isCurrentUser ? 0 : 64,
+                                ),
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isCurrentUser
+                                      ? Colors.deepPurple
+                                      : Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  message['text'] ?? '',
+                                  style: TextStyle(
+                                    color: isCurrentUser
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     );
                   }
                   try {
@@ -658,7 +1335,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                         // Convert senderId to String and compare directly.
                         final String senderId = message['senderId'].toString();
                         final bool isMe = senderId == currentUserId;
-
+                        final bool isGif = message['isGif'] == true;
                         final messageText = message['content'] ?? 'No message';
                         final timestamp = message['timestamp'] != null
                             ? (message['timestamp'] as Timestamp).toDate()
@@ -797,16 +1474,77 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                                 Padding(
                                                   padding:
                                                       const EdgeInsets.all(12),
-                                                  child: Text(
-                                                    messageText,
-                                                    style: TextStyle(
-                                                      color: isMe
-                                                          ? Colors.white
-                                                          : Colors.black87,
-                                                      fontSize: 16,
-                                                      height: 1.3,
-                                                    ),
-                                                  ),
+                                                  child: isGif
+                                                      ? ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(12),
+                                                          child: Image.network(
+                                                            message['gifUrl'],
+                                                            fit: BoxFit.cover,
+                                                            loadingBuilder:
+                                                                (context, child,
+                                                                    loadingProgress) {
+                                                              if (loadingProgress ==
+                                                                  null)
+                                                                return child;
+                                                              return Container(
+                                                                height: 150,
+                                                                child: Center(
+                                                                  child:
+                                                                      CircularProgressIndicator(
+                                                                    value: loadingProgress.expectedTotalBytes !=
+                                                                            null
+                                                                        ? loadingProgress.cumulativeBytesLoaded /
+                                                                            loadingProgress.expectedTotalBytes!
+                                                                        : null,
+                                                                    color: isMe
+                                                                        ? Colors
+                                                                            .white
+                                                                        : Colors
+                                                                            .deepPurple,
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            },
+                                                            errorBuilder:
+                                                                (context, error,
+                                                                    stackTrace) {
+                                                              return Container(
+                                                                height: 100,
+                                                                width: 150,
+                                                                color: isMe
+                                                                    ? Colors
+                                                                        .deepPurple
+                                                                        .shade300
+                                                                    : Colors.grey[
+                                                                        300],
+                                                                child: Center(
+                                                                  child: Icon(
+                                                                    Icons
+                                                                        .broken_image,
+                                                                    color: isMe
+                                                                        ? Colors
+                                                                            .white
+                                                                        : Colors
+                                                                            .grey[600],
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            },
+                                                          ),
+                                                        )
+                                                      : Text(
+                                                          messageText,
+                                                          style: TextStyle(
+                                                            color: isMe
+                                                                ? Colors.white
+                                                                : Colors
+                                                                    .black87,
+                                                            fontSize: 16,
+                                                            height: 1.3,
+                                                          ),
+                                                        ),
                                                 ),
                                                 if (message['reaction'] != null)
                                                   Positioned(
@@ -918,9 +1656,9 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                   child: Row(
                     children: [
                       IconButton(
-                        icon: Icon(Icons.emoji_emotions_outlined,
+                        icon: Icon(Icons.gif_box_rounded,
                             color: Colors.deepPurple.shade300),
-                        onPressed: () {}, // Placeholder for emoji picker
+                        onPressed: _showGifPicker, // Show GIF picker
                       ),
                       Expanded(
                         child: Padding(

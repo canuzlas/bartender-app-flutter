@@ -1,3 +1,4 @@
+import 'package:bartender/S/mainPart/discoverScreen/searchDelegate.dart';
 import 'package:bartender/S/mainPart/msgScreen/messagingPage.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +14,17 @@ class MsgScreenMain extends ConsumerStatefulWidget {
 }
 
 class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _isSearching = false;
+  bool _isRefreshing = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   String timeAgo(DateTime date) {
     final Duration diff = DateTime.now().difference(date);
     if (diff.inDays > 1) {
@@ -26,18 +38,67 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
     }
   }
 
-  // Updated deleteMessage method using non-sorted conversationId
+  // Updated deleteMessage method to handle both conversation ID formats
   Future<void> deleteMessage(String participantId) async {
     try {
       final currentUserId = FirebaseAuth.instance.currentUser!.uid;
-      final conversationId = "$currentUserId-$participantId";
-      await FirebaseFirestore.instance
+
+      // Try first format: currentUser-participant
+      final conversationId1 = "$currentUserId-$participantId";
+
+      // Try second format: participant-currentUser
+      final conversationId2 = "$participantId-$currentUserId";
+
+      // Check if the first format exists
+      final doc1 = await FirebaseFirestore.instance
           .collection('messages')
-          .doc(conversationId)
-          .delete();
-      print("Conversation deleted successfully.");
+          .doc(conversationId1)
+          .get();
+
+      if (doc1.exists) {
+        // Delete the document if it exists
+        await FirebaseFirestore.instance
+            .collection('messages')
+            .doc(conversationId1)
+            .delete();
+        print("Conversation deleted successfully with ID: $conversationId1");
+      } else {
+        // Check if the second format exists
+        final doc2 = await FirebaseFirestore.instance
+            .collection('messages')
+            .doc(conversationId2)
+            .get();
+
+        if (doc2.exists) {
+          // Delete the document if it exists
+          await FirebaseFirestore.instance
+              .collection('messages')
+              .doc(conversationId2)
+              .delete();
+          print("Conversation deleted successfully with ID: $conversationId2");
+        } else {
+          print("No conversation found with either ID format");
+        }
+      }
+
+      // Show success message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Conversation deleted successfully'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
       print("Error deleting conversation: $e");
+      // Show error message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete conversation'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -56,266 +117,530 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
     return userDoc.data() ?? {};
   }
 
+  Future<void> _refreshMessages() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    // Wait a bit to show the refresh indicator
+    await Future.delayed(Duration(milliseconds: 800));
+
+    setState(() {
+      _isRefreshing = false;
+    });
+
+    return;
+  }
+
+  void _startNewChat(BuildContext context) {
+    // Use showSearch for SearchDelegate
+    showSearch(
+      context: context,
+      delegate: UserSearchDelegate(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
     final darkThemeMain = ref.watch(darkTheme);
 
-    print("Current User ID: $currentUserId");
     return Scaffold(
-      body: StreamBuilder<QuerySnapshot>(
-        // Filter only docs where current user is sender (to avoid duplicates)
-        stream: FirebaseFirestore.instance
-            .collection('messages')
-            .where('senderId', isEqualTo: currentUserId)
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-                child: CircularProgressIndicator(
-              color: Colors.deepPurple,
-              strokeWidth: 3,
-            ));
-          }
+      appBar: _isSearching
+          ? AppBar(
+              backgroundColor: darkThemeMain ? Colors.black : Colors.white,
+              elevation: 0,
+              title: TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search messages...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(
+                      color:
+                          darkThemeMain ? Colors.grey[400] : Colors.grey[600]),
+                ),
+                style: TextStyle(
+                    color: darkThemeMain ? Colors.white : Colors.black),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+              ),
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back),
+                color: darkThemeMain ? Colors.white : Colors.black,
+                onPressed: () {
+                  setState(() {
+                    _isSearching = false;
+                    _searchQuery = '';
+                    _searchController.clear();
+                  });
+                },
+              ),
+            )
+          : AppBar(
+              backgroundColor: darkThemeMain ? Colors.black : Colors.white,
+              elevation: 0,
+              title: Text(
+                'Messages',
+                style: TextStyle(
+                  color: darkThemeMain ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.search,
+                      color: darkThemeMain ? Colors.white : Colors.black),
+                  onPressed: () {
+                    setState(() {
+                      _isSearching = true;
+                    });
+                  },
+                ),
+              ],
+            ),
+      body: RefreshIndicator(
+        onRefresh: _refreshMessages,
+        color: Colors.deepPurple,
+        child: StreamBuilder<QuerySnapshot>(
+          // Modified query to only include messages where the current user is the sender
+          stream: FirebaseFirestore.instance
+              .collection('messages')
+              .where('senderId', isEqualTo: currentUserId)
+              .orderBy('timestamp', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !_isRefreshing) {
+              return Center(
+                  child: CircularProgressIndicator(
+                color: Colors.deepPurple,
+                strokeWidth: 3,
+              ));
+            }
 
-          if (snapshot.hasError) {
-            print("Error: ${snapshot.error}");
-            return Center(
-                child: Text(
-              'An error occurred.',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-            ));
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            print("No messages found.");
-            return Center(
-              child: Column(
+            if (snapshot.hasError) {
+              print("Error: ${snapshot.error}");
+              return Center(
+                  child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.message, size: 80, color: Colors.grey[400]),
+                  Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
                   SizedBox(height: 16),
                   Text(
-                    'No messages found',
-                    style: TextStyle(fontSize: 20, color: Colors.grey[600]),
+                    'Something went wrong',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Your conversations will appear here',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-                  ),
+                  TextButton(
+                    onPressed: _refreshMessages,
+                    child: Text('Try Again',
+                        style: TextStyle(color: Colors.deepPurple)),
+                  )
                 ],
-              ),
-            );
-          }
+              ));
+            }
 
-          final messages = snapshot.data!.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-          final usersMap = <String, Map<String, dynamic>>{};
-
-          return FutureBuilder(
-            future: Future.wait(messages.map((message) async {
-              final messageData = message;
-              final participantId = currentUserId == messageData['senderId']
-                  ? messageData['recipientId']
-                  : messageData['senderId'];
-              final userData = await getUserData(participantId);
-              final profilePhoto =
-                  userData['photoURL'] ?? 'assets/images/placeholder.png';
-              final sendername = userData['displayname'] ?? 'Unknown';
-              final lastMessage = messageData['lastMessage'] ?? 'No message';
-              final timestamp = messageData['timestamp'] != null
-                  ? (messageData['timestamp'] as Timestamp).toDate()
-                  : DateTime.now();
-              if (!usersMap.containsKey(participantId) ||
-                  timestamp.compareTo(usersMap[participantId]!['timestamp']) >
-                      0) {
-                usersMap[participantId] = {
-                  'profilePhoto': profilePhoto,
-                  'lastMessage': lastMessage,
-                  'timestamp': timestamp,
-                  'senderId': messageData['senderId'] ?? 'Unknown',
-                  'sendername': sendername,
-                  'messageId': messageData['messageId'] ?? 'Unknown'
-                };
-              }
-            }).toList()),
-            builder: (context, AsyncSnapshot<void> userSnapshot) {
-              if (userSnapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
-              }
-
-              if (userSnapshot.hasError) {
-                print("Error: ${userSnapshot.error}");
-                return Center(child: Text('An error occurred.'));
-              }
-
-              final usersList = usersMap.entries.toList()
-                ..sort((a, b) =>
-                    b.value['timestamp'].compareTo(a.value['timestamp']));
-
-              return ListView.builder(
-                physics: BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                itemCount: usersList.length,
-                itemBuilder: (context, index) {
-                  final user = usersList[index];
-                  final timestamp = user.value['timestamp'] as DateTime;
-                  final timeAgoText = timeAgo(timestamp);
-                  return Dismissible(
-                    key: Key(user.value['messageId']),
-                    direction: DismissDirection.endToStart,
-                    onDismissed: (direction) {
-                      deleteMessage(user.key);
-                    },
-                    background: Container(
-                      margin: EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade800,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Delete',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(Icons.delete_forever, color: Colors.white),
-                        ],
-                      ),
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.message, size: 80, color: Colors.grey[400]),
+                    SizedBox(height: 16),
+                    Text(
+                      'No messages yet',
+                      style: TextStyle(fontSize: 20, color: Colors.grey[600]),
                     ),
-                    child: GestureDetector(
-                      onTap: () => openMessagingPage(context, user.key),
-                      child: Container(
-                        margin:
-                            EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                    SizedBox(height: 8),
+                    Text(
+                      'Start a conversation with someone',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+                    ),
+                    SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => _startNewChat(context),
+                      icon: Icon(Icons.chat, color: Colors.white),
+                      label: Text('Start New Chat'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    )
+                  ],
+                ),
+              );
+            }
+
+            final messages = snapshot.data!.docs
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+            final usersMap = <String, Map<String, dynamic>>{};
+
+            return FutureBuilder(
+              future: Future.wait(messages.map((message) async {
+                final messageData = message;
+                final participantId = currentUserId == messageData['senderId']
+                    ? messageData['recipientId']
+                    : messageData['senderId'];
+                final userData = await getUserData(participantId);
+                final profilePhoto =
+                    userData['photoURL'] ?? 'assets/images/placeholder.png';
+                final sendername = userData['displayname'] ?? 'Unknown';
+                final lastMessage = messageData['lastMessage'] ?? 'No message';
+                final timestamp = messageData['timestamp'] != null
+                    ? (messageData['timestamp'] as Timestamp).toDate()
+                    : DateTime.now();
+                final unread = messageData['unread'] ?? false;
+                if (!usersMap.containsKey(participantId) ||
+                    timestamp.compareTo(usersMap[participantId]!['timestamp']) >
+                        0) {
+                  usersMap[participantId] = {
+                    'profilePhoto': profilePhoto,
+                    'lastMessage': lastMessage,
+                    'timestamp': timestamp,
+                    'senderId': messageData['senderId'] ?? 'Unknown',
+                    'sendername': sendername,
+                    'unread': unread,
+                    'messageId': messageData['messageId'] ?? 'Unknown'
+                  };
+                }
+              }).toList()),
+              builder: (context, AsyncSnapshot<void> userSnapshot) {
+                if (userSnapshot.connectionState == ConnectionState.waiting &&
+                    !_isRefreshing) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (userSnapshot.hasError) {
+                  print("Error: ${userSnapshot.error}");
+                  return Center(child: Text('An error occurred.'));
+                }
+
+                final usersList = usersMap.entries.toList()
+                  ..sort((a, b) =>
+                      b.value['timestamp'].compareTo(a.value['timestamp']));
+
+                // Apply search filter if searching
+                final filteredUsersList = _searchQuery.isEmpty
+                    ? usersList
+                    : usersList.where((user) {
+                        final senderName =
+                            user.value['sendername'].toString().toLowerCase();
+                        final lastMessage =
+                            user.value['lastMessage'].toString().toLowerCase();
+                        return senderName.contains(_searchQuery) ||
+                            lastMessage.contains(_searchQuery);
+                      }).toList();
+
+                if (filteredUsersList.isEmpty && _searchQuery.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.search_off,
+                            size: 70, color: Colors.grey[400]),
+                        SizedBox(height: 16),
+                        Text(
+                          'No matches found',
+                          style:
+                              TextStyle(fontSize: 18, color: Colors.grey[600]),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Try a different search term',
+                          style:
+                              TextStyle(fontSize: 16, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  physics: BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics()),
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  itemCount: filteredUsersList.length,
+                  itemBuilder: (context, index) {
+                    final user = filteredUsersList[index];
+                    final timestamp = user.value['timestamp'] as DateTime;
+                    final timeAgoText = timeAgo(timestamp);
+                    final isUnread = user.value['unread'] == true &&
+                        user.value['senderId'] != currentUserId;
+
+                    return Dismissible(
+                      key: Key(user.value['messageId']),
+                      direction: DismissDirection.endToStart,
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: Text("Delete Conversation"),
+                              content: Text(
+                                  "Are you sure you want to delete this conversation?"),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  child: Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: Text("Delete",
+                                      style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      onDismissed: (direction) {
+                        deleteMessage(user.key);
+                      },
+                      background: Container(
+                        margin: EdgeInsets.symmetric(vertical: 4),
                         decoration: BoxDecoration(
-                          color:
-                              darkThemeMain ? Color(0xFF2A2A2A) : Colors.white,
+                          color: Colors.red.shade800,
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              spreadRadius: 0,
-                              blurRadius: 10,
-                              offset: Offset(0, 2),
+                        ),
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Delete',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
                             ),
+                            SizedBox(width: 8),
+                            Icon(Icons.delete_forever, color: Colors.white),
                           ],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.deepPurple.withOpacity(0.2),
-                                      spreadRadius: 1,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                                child: CircleAvatar(
-                                  backgroundImage: user.value['profilePhoto'] !=
-                                              null &&
-                                          user.value['profilePhoto']
-                                              .startsWith('http')
-                                      ? NetworkImage(user.value['profilePhoto'])
-                                      : AssetImage('assets/openingPageDT.png')
-                                          as ImageProvider,
-                                  radius: 30,
-                                ),
-                              ),
-                              SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          user.value['sendername'] != null &&
-                                                  user.value['sendername'] !=
-                                                      'Unknown'
-                                              ? user.value['sendername']
-                                              : 'Unknown',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 17,
-                                            color: darkThemeMain
-                                                ? Colors.white
-                                                : Colors.black87,
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: darkThemeMain
-                                                ? Colors.deepPurple
-                                                    .withOpacity(0.2)
-                                                : Colors.deepPurple
-                                                    .withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            timeAgoText,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: darkThemeMain
-                                                  ? Colors.grey[300]
-                                                  : Colors.deepPurple[700],
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 6),
-                                    Text(
-                                      user.value['lastMessage'] != null &&
-                                              user.value['lastMessage'] !=
-                                                  'Unknown'
-                                          ? user.value['lastMessage']
-                                          : 'Unknown',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: darkThemeMain
-                                            ? Colors.grey[400]
-                                            : Colors.grey[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                      ),
+                      child: GestureDetector(
+                        onTap: () => openMessagingPage(context, user.key),
+                        child: Container(
+                          margin:
+                              EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                          decoration: BoxDecoration(
+                            color: isUnread
+                                ? (darkThemeMain
+                                    ? Colors.deepPurple.withOpacity(0.15)
+                                    : Colors.deepPurple.withOpacity(0.08))
+                                : (darkThemeMain
+                                    ? Color(0xFF2A2A2A)
+                                    : Colors.white),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                spreadRadius: 0,
+                                blurRadius: 10,
+                                offset: Offset(0, 2),
                               ),
                             ],
                           ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              children: [
+                                Stack(
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.deepPurple
+                                                .withOpacity(0.2),
+                                            spreadRadius: 1,
+                                            blurRadius: 4,
+                                            offset: Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: CircleAvatar(
+                                        backgroundImage: user.value[
+                                                        'profilePhoto'] !=
+                                                    null &&
+                                                user.value['profilePhoto']
+                                                    .startsWith('http')
+                                            ? NetworkImage(
+                                                user.value['profilePhoto'])
+                                            : AssetImage(
+                                                    'assets/openingPageDT.png')
+                                                as ImageProvider,
+                                        radius: 30,
+                                      ),
+                                    ),
+                                    if (isUnread)
+                                      Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        child: Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: Colors.deepPurple,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: darkThemeMain
+                                                  ? Color(0xFF2A2A2A)
+                                                  : Colors.white,
+                                              width: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              user.value['sendername'] !=
+                                                          null &&
+                                                      user.value[
+                                                              'sendername'] !=
+                                                          'Unknown'
+                                                  ? user.value['sendername']
+                                                  : 'Unknown',
+                                              style: TextStyle(
+                                                fontWeight: isUnread
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal,
+                                                fontSize: 17,
+                                                color: darkThemeMain
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isUnread
+                                                  ? Colors.deepPurple
+                                                      .withOpacity(0.8)
+                                                  : (darkThemeMain
+                                                      ? Colors.deepPurple
+                                                          .withOpacity(0.2)
+                                                      : Colors.deepPurple
+                                                          .withOpacity(0.1)),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              timeAgoText,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: isUnread
+                                                    ? Colors.white
+                                                    : (darkThemeMain
+                                                        ? Colors.grey[300]
+                                                        : Colors
+                                                            .deepPurple[700]),
+                                                fontWeight: isUnread
+                                                    ? FontWeight.bold
+                                                    : FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          if (user.value['senderId'] ==
+                                              currentUserId)
+                                            Container(
+                                              margin: EdgeInsets.only(right: 6),
+                                              padding: EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: darkThemeMain
+                                                    ? Colors.grey[700]
+                                                    : Colors.grey[200],
+                                              ),
+                                              child: Icon(
+                                                Icons.send,
+                                                size: 12,
+                                                color: darkThemeMain
+                                                    ? Colors.grey[300]
+                                                    : Colors.grey[700],
+                                              ),
+                                            ),
+                                          Expanded(
+                                            child: Text(
+                                              user.value['lastMessage'] !=
+                                                          null &&
+                                                      user.value[
+                                                              'lastMessage'] !=
+                                                          'Unknown'
+                                                  ? user.value['lastMessage']
+                                                  : 'Unknown',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: isUnread
+                                                    ? FontWeight.w600
+                                                    : FontWeight.normal,
+                                                color: isUnread
+                                                    ? (darkThemeMain
+                                                        ? Colors.white
+                                                        : Colors.black87)
+                                                    : (darkThemeMain
+                                                        ? Colors.grey[400]
+                                                        : Colors.grey[700]),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _startNewChat(context),
+        backgroundColor: Colors.deepPurple,
+        child: Icon(Icons.chat, color: Colors.white),
       ),
     );
   }

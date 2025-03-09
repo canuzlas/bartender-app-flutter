@@ -1,3 +1,4 @@
+import 'package:bartender/S/mainPart/discoverScreen/searchDelegate.dart';
 import 'package:bartender/S/mainPart/homeScreen/homeScreenState.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -54,8 +55,10 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                       SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: () {
-                          // Navigate to discover or search page
-                          // Implementation depends on your app's navigation structure
+                          showSearch(
+                            context: context,
+                            delegate: UserSearchDelegate(),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: darkThemeMain

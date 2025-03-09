@@ -317,26 +317,68 @@ class HomeScreenController {
 
                               final userId =
                                   FirebaseAuth.instance.currentUser?.uid;
-                              final userName = FirebaseAuth
-                                  .instance.currentUser?.displayName;
-                              final userPhotoURL =
-                                  FirebaseAuth.instance.currentUser?.photoURL;
 
-                              if (userId != null && userName != null) {
-                                FirebaseFirestore.instance
-                                    .collection('tweets')
-                                    .add({
-                                  'userId': userId,
-                                  'userName': userName,
-                                  'userPhotoURL': userPhotoURL,
-                                  'message': _textController.text,
-                                  'timestamp': Timestamp.now(),
-                                  'likedBy': [],
-                                  'photoURL': photoURL,
-                                });
-                                notifier.reset();
-                                Navigator.of(context).pop();
-                                ref.refresh(sortedTweetsProvider);
+                              if (userId != null) {
+                                try {
+                                  // Fetch the current user data from Firestore users collection
+                                  final userDoc = await FirebaseFirestore
+                                      .instance
+                                      .collection('users')
+                                      .doc(userId)
+                                      .get();
+
+                                  if (userDoc.exists) {
+                                    // Use user data from Firestore
+                                    final userData = userDoc.data()!;
+
+                                    FirebaseFirestore.instance
+                                        .collection('tweets')
+                                        .add({
+                                      'userId': userId,
+                                      'userName': userData['displayname'] ??
+                                          'Unknown User',
+                                      'userPhotoURL':
+                                          userData['photoURL'] ?? '',
+                                      'message': _textController.text,
+                                      'timestamp': Timestamp.now(),
+                                      'likedBy': [],
+                                      'photoURL': photoURL,
+                                    });
+                                  } else {
+                                    // Fallback to FirebaseAuth data if user document doesn't exist
+                                    final userName = FirebaseAuth
+                                        .instance.currentUser?.displayName;
+                                    final userPhotoURL = FirebaseAuth
+                                        .instance.currentUser?.photoURL;
+
+                                    FirebaseFirestore.instance
+                                        .collection('tweets')
+                                        .add({
+                                      'userId': userId,
+                                      'userName': userName ?? 'Unknown User',
+                                      'userPhotoURL': userPhotoURL ?? '',
+                                      'message': _textController.text,
+                                      'timestamp': Timestamp.now(),
+                                      'likedBy': [],
+                                      'photoURL': photoURL,
+                                    });
+                                  }
+
+                                  notifier.reset();
+                                  Navigator.of(context).pop();
+                                  ref.refresh(sortedTweetsProvider);
+                                } catch (e) {
+                                  print('Error fetching user data: $e');
+                                  // Handle the error, possibly show error message to user
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(langMain == "tr"
+                                          ? 'Gönderi yayınlanırken bir hata oluştu'
+                                          : 'Error publishing post'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
                               }
                               notifier.setUploading(false);
                             },

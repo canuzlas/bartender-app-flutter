@@ -1,4 +1,5 @@
 import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
+import 'package:bartender/mainSettings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,8 @@ class OtherUserProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsyncValue = ref.watch(userProvider(userId));
     final tweetCountAsyncValue = ref.watch(tweetCountProvider(userId));
+    final darkThemeMain = ref.watch(darkTheme.notifier).state;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: userAsyncValue.when(
@@ -28,156 +31,236 @@ class OtherUserProfileScreen extends ConsumerWidget {
               ? (userData['createdAt'] as Timestamp).toDate()
               : null;
 
-          return Scaffold(
-            body: CustomScrollView(
+          return SafeArea(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
               slivers: [
-                SliverAppBar(
-                  expandedHeight: 200.0,
-                  floating: false,
-                  pinned: true,
-                  backgroundColor: Colors.transparent,
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.network(
-                          userData['coverPhotoURL'] ??
-                              'https://picsum.photos/id/237/200/300',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const ColoredBox(
-                            color: Colors.grey,
-                            child: Center(child: Icon(Icons.error)),
-                          ),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                Colors.black.withOpacity(0.5),
-                                Colors.transparent,
-                              ],
-                            ),
-                          ),
+                SliverToBoxAdapter(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(25)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -5),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            CircleAvatar(
-                              radius: 40,
-                              backgroundImage: NetworkImage(
-                                userData['photoURL'] ??
-                                    'https://picsum.photos/200',
-                              ),
-                            ),
-                            Row(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Transform.translate(
+                            offset: const Offset(0, -20),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (isFollowing) {
-                                      ref
-                                          .read(followingProvider(userId)
-                                              .notifier)
-                                          .unfollow();
-                                    } else {
-                                      ref
-                                          .read(followingProvider(userId)
-                                              .notifier)
-                                          .follow();
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isFollowing
-                                        ? Colors.redAccent
-                                        : Colors.blue,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child:
-                                      Text(isFollowing ? 'Unfollow' : 'Follow'),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            MessagingPage(recipientId: userId),
+                                Hero(
+                                  tag: 'avatar-${userData['uid']}',
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: theme.cardColor,
+                                        width: 4,
                                       ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    foregroundColor: Colors.white,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 10,
+                                        ),
+                                      ],
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 45,
+                                      backgroundColor: Colors.grey.shade200,
+                                      backgroundImage: NetworkImage(
+                                        userData['photoURL'] ??
+                                            'https://picsum.photos/200',
+                                      ),
+                                    ),
                                   ),
-                                  child: const Text('Message'),
+                                ),
+                                Row(
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => MessagingPage(
+                                                recipientId: userId),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        foregroundColor: Colors.white,
+                                        elevation: 2,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.message, size: 18),
+                                      label: const Text('Message'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        if (isFollowing) {
+                                          ref
+                                              .read(followingProvider(userId)
+                                                  .notifier)
+                                              .unfollow();
+                                        } else {
+                                          ref
+                                              .read(followingProvider(userId)
+                                                  .notifier)
+                                              .follow();
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isFollowing
+                                            ? Colors.grey.shade200
+                                            : theme.primaryColor,
+                                        foregroundColor: isFollowing
+                                            ? Colors.black87
+                                            : Colors.white,
+                                        elevation: 2,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                      icon: Icon(
+                                        isFollowing
+                                            ? Icons.person_remove
+                                            : Icons.person_add,
+                                        size: 18,
+                                      ),
+                                      label: Text(
+                                          isFollowing ? 'Unfollow' : 'Follow'),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          userData['displayname'] ?? 'Unknown',
-                          style: const TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          userData['bio'] ?? 'No bio available',
-                          style:
-                              const TextStyle(fontSize: 16, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 8),
-                        if (joinDate != null)
-                          Text(
-                            'Joined: ${DateFormat('MMMM d, y').format(joinDate)}',
-                            style: const TextStyle(
-                                fontSize: 14, color: Colors.grey),
                           ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildInfoColumn(
-                                context,
-                                'Followers',
-                                userData['followers']?.length.toString() ??
-                                    '0'),
-                            _buildInfoColumn(
-                                context,
-                                'Following',
-                                userData['following']?.length.toString() ??
-                                    '0'),
-                            tweetCountAsyncValue.when(
-                              data: (tweetCount) => _buildInfoColumn(
-                                  context, 'Tweets', '$tweetCount'),
-                              loading: () =>
-                                  _buildInfoColumn(context, 'Tweets', '-'),
-                              error: (error, stackTrace) =>
-                                  _buildInfoColumn(context, 'Tweets', 'Err'),
+                          Transform.translate(
+                            offset: const Offset(0, -15),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  userData['displayname'] ?? 'Unknown',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.textTheme.bodyLarge?.color,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  userData['bio'] ?? 'No bio available',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: theme.textTheme.bodyMedium?.color
+                                        ?.withOpacity(0.7),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                if (joinDate != null)
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today,
+                                        size: 16,
+                                        color: theme.textTheme.bodySmall?.color,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Joined ${DateFormat('MMMM d, y').format(joinDate)}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color:
+                                              theme.textTheme.bodySmall?.color,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const Divider(),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'User Tweets',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                          ),
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildStatsColumn(
+                                      context,
+                                      'Tweets',
+                                      tweetCountAsyncValue.when(
+                                        data: (count) => '$count',
+                                        loading: () => '-',
+                                        error: (_, __) => 'Err',
+                                      ),
+                                      darkThemeMain: darkThemeMain),
+                                  _buildVerticalDivider(),
+                                  _buildStatsColumn(
+                                    context,
+                                    'Following',
+                                    userData['following']?.length.toString() ??
+                                        '0',
+                                    darkThemeMain: darkThemeMain,
+                                  ),
+                                  _buildVerticalDivider(),
+                                  _buildStatsColumn(
+                                    context,
+                                    'Followers',
+                                    userData['followers']?.length.toString() ??
+                                        '0',
+                                    darkThemeMain: darkThemeMain,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.format_quote, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Recent Tweets',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.textTheme.titleLarge?.color,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Divider(),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -188,8 +271,30 @@ class OtherUserProfileScreen extends ConsumerWidget {
                     return userTweetsAsyncValue.when(
                       data: (tweets) {
                         if (tweets.isEmpty) {
-                          return const SliverToBoxAdapter(
-                              child: Center(child: Text('No tweets found')));
+                          return SliverToBoxAdapter(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32.0),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.speaker_notes_off,
+                                      size: 60,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No tweets found',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
                         }
                         return SliverList(
                           delegate: SliverChildBuilderDelegate(
@@ -200,119 +305,164 @@ class OtherUserProfileScreen extends ConsumerWidget {
                               final likeCount = tweetData['likes'] ?? 0;
                               final commentCount = tweetData['comments'] ?? 0;
                               final postPhotoURL = tweetData['photoURL'];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 12.0, vertical: 6.0),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (postPhotoURL != null &&
-                                        postPhotoURL.toString().isNotEmpty)
-                                      ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                                top: Radius.circular(12)),
-                                        child: Image.network(
-                                          postPhotoURL,
-                                          width: double.infinity,
-                                          height: 200,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error,
-                                                  stackTrace) =>
-                                              const SizedBox(
-                                                  height: 200,
-                                                  child: Center(
-                                                      child: Icon(
-                                                          Icons.broken_image))),
+                              final timestamp =
+                                  tweetData['timestamp'] as Timestamp;
+                              final formattedDate = DateFormat('MMM d · h:mm a')
+                                  .format(timestamp.toDate());
+
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                    bottom: 8.0, left: 16.0, right: 16.0),
+                                child: Card(
+                                  elevation: 1,
+                                  margin: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (postPhotoURL != null &&
+                                          postPhotoURL.toString().isNotEmpty)
+                                        ClipRRect(
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                                  top: Radius.circular(16)),
+                                          child: Image.network(
+                                            postPhotoURL,
+                                            width: double.infinity,
+                                            height: 200,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Container(
+                                              height: 200,
+                                              color: Colors.grey.shade200,
+                                              child: Center(
+                                                  child: Icon(
+                                                Icons.broken_image,
+                                                color: Colors.grey.shade400,
+                                                size: 40,
+                                              )),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ListTile(
-                                      title: Text(tweetData['message'] ?? ''),
-                                      subtitle: Text(
-                                          'Posted on: ${tweetData['timestamp'].toDate()}'),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16.0, vertical: 8.0),
-                                      child: Row(
-                                        children: [
-                                          // Retrieve current user and determine like state
-                                          Builder(
-                                            builder: (context) {
-                                              final currentUser = FirebaseAuth
-                                                  .instance.currentUser;
-                                              final likedBy =
-                                                  (tweetData['likedBy']
-                                                          as List<dynamic>?) ??
-                                                      [];
-                                              final isLiked =
-                                                  currentUser != null &&
-                                                      likedBy.contains(
-                                                          currentUser.uid);
-                                              return Row(
-                                                children: [
-                                                  IconButton(
-                                                    icon: Icon(
-                                                      isLiked
+                                      Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              tweetData['message'] ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                height: 1.4,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              formattedDate,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            const Divider(),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceAround,
+                                              children: [
+                                                // Retrieve current user and determine like state
+                                                Builder(
+                                                  builder: (context) {
+                                                    final currentUser =
+                                                        FirebaseAuth.instance
+                                                            .currentUser;
+                                                    final likedBy = (tweetData[
+                                                                'likedBy']
+                                                            as List<
+                                                                dynamic>?) ??
+                                                        [];
+                                                    final isLiked =
+                                                        currentUser != null &&
+                                                            likedBy.contains(
+                                                                currentUser
+                                                                    .uid);
+                                                    return _buildTweetActionButton(
+                                                      icon: isLiked
                                                           ? Icons.favorite
                                                           : Icons
                                                               .favorite_border,
+                                                      label: '$likeCount',
                                                       color: isLiked
                                                           ? Colors.red
                                                           : null,
-                                                    ),
-                                                    onPressed: () async {
-                                                      if (currentUser == null)
-                                                        return;
-                                                      if (!isLiked) {
-                                                        await tweet.reference
-                                                            .update({
-                                                          'likes': FieldValue
-                                                              .increment(1),
-                                                          'likedBy': FieldValue
-                                                              .arrayUnion([
-                                                            currentUser.uid
-                                                          ])
-                                                        });
-                                                      } else {
-                                                        await tweet.reference
-                                                            .update({
-                                                          'likes': FieldValue
-                                                              .increment(-1),
-                                                          'likedBy': FieldValue
-                                                              .arrayRemove([
-                                                            currentUser.uid
-                                                          ])
-                                                        });
-                                                      }
-                                                    },
-                                                  ),
-                                                  Text('$likeCount'),
-                                                ],
-                                              );
-                                            },
-                                          ),
-                                          const SizedBox(width: 16),
-                                          IconButton(
-                                            icon: const Icon(
-                                                Icons.comment_bank_outlined),
-                                            onPressed: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      CommentsPage(
-                                                          tweetId: tweet.id),
+                                                      onTap: () async {
+                                                        if (currentUser == null)
+                                                          return;
+                                                        if (!isLiked) {
+                                                          await tweet.reference
+                                                              .update({
+                                                            'likes': FieldValue
+                                                                .increment(1),
+                                                            'likedBy': FieldValue
+                                                                .arrayUnion([
+                                                              currentUser.uid
+                                                            ])
+                                                          });
+                                                        } else {
+                                                          await tweet.reference
+                                                              .update({
+                                                            'likes': FieldValue
+                                                                .increment(-1),
+                                                            'likedBy': FieldValue
+                                                                .arrayRemove([
+                                                              currentUser.uid
+                                                            ])
+                                                          });
+                                                        }
+                                                      },
+                                                    );
+                                                  },
                                                 ),
-                                              );
-                                            },
-                                          ),
-                                          Text('$commentCount'),
-                                        ],
+                                                _buildTweetActionButton(
+                                                  icon:
+                                                      Icons.chat_bubble_outline,
+                                                  label: '$commentCount',
+                                                  onTap: () {
+                                                    Navigator.of(context).push(
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            CommentsPage(
+                                                                tweetId:
+                                                                    tweet.id),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                                _buildTweetActionButton(
+                                                  icon: Icons.share_outlined,
+                                                  label: 'Share',
+                                                  onTap: () {
+                                                    // Share functionality
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                            const SnackBar(
+                                                                content: Text(
+                                                                    'Sharing coming soon')));
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               );
                             },
@@ -321,34 +471,106 @@ class OtherUserProfileScreen extends ConsumerWidget {
                         );
                       },
                       loading: () => const SliverToBoxAdapter(
-                          child: Center(child: CircularProgressIndicator())),
+                          child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      )),
                       error: (error, stack) => SliverToBoxAdapter(
-                          child: Center(child: Text('Error: $error'))),
+                          child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.error_outline,
+                                  size: 40, color: Colors.red),
+                              SizedBox(height: 16),
+                              Text('Error loading tweets',
+                                  style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      )),
                     );
                   },
+                ),
+                // Add some padding at the bottom
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 30),
                 ),
               ],
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        loading: () => const Center(
+          child: CircularProgressIndicator(),
+        ),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: $error', style: const TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildInfoColumn(BuildContext context, String label, String value) {
+  Widget _buildTweetActionButton({
+    required IconData icon,
+    required String label,
+    required Function() onTap,
+    Color? color,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 4),
+            Text(label),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsColumn(BuildContext context, String label, String value,
+      {bool darkThemeMain = true}) {
     return Column(
       children: [
         Text(
           value,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: darkThemeMain ? Colors.white : Colors.black,
+          ),
         ),
+        const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade600,
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(
+      height: 30,
+      width: 1,
+      color: Colors.grey.shade300,
     );
   }
 }

@@ -349,24 +349,6 @@ class _EmojiPickerPageState extends State<EmojiPickerPage> {
           ),
           const SizedBox(height: 16),
 
-          // Search bar
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: "Search emojis...",
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              filled: true,
-              fillColor: Colors.grey.shade100,
-            ),
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
-          ),
           const SizedBox(height: 16),
 
           // Category selector

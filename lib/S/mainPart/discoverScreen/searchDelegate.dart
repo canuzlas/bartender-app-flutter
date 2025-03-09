@@ -1,6 +1,8 @@
+import 'package:bartender/S/mainPart/otherUserProfileScreen/otherUserProfileScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:bartender/S/mainPart/msgScreen/messagingPage.dart';
 
 class UserSearchDelegate extends SearchDelegate {
   final FirebaseAuth auth = FirebaseAuth.instance;
@@ -95,11 +97,10 @@ class UserSearchDelegate extends SearchDelegate {
       return _buildEmptySearchState(context);
     }
 
-    final searchQuery = query.trim();
-    final resultsStream = FirebaseFirestore.instance
-        .collection('users')
-        .orderBy('displayname')
-        .startAt([searchQuery]).endAt([searchQuery + '\uf8ff']).snapshots();
+    final searchQuery = query.trim().toLowerCase();
+    // Using a different approach for case-insensitive search
+    final resultsStream =
+        FirebaseFirestore.instance.collection('users').get().asStream();
 
     return StreamBuilder<QuerySnapshot>(
       stream: resultsStream,
@@ -111,13 +112,19 @@ class UserSearchDelegate extends SearchDelegate {
           return _buildErrorState(context, snapshot.error);
         }
 
-        final users = snapshot.data?.docs ?? [];
+        final allUsers = snapshot.data?.docs ?? [];
+        // Filter users whose displayname contains the search query (case insensitive)
+        final filteredUsers = allUsers.where((doc) {
+          final displayname =
+              (doc['displayname'] as String?)?.toLowerCase() ?? '';
+          return displayname.contains(searchQuery);
+        }).toList();
 
-        if (users.isEmpty) {
+        if (filteredUsers.isEmpty) {
           return _buildNoResultsState(context);
         }
 
-        return _buildUserList(context, users);
+        return _buildUserList(context, filteredUsers);
       },
     );
   }
@@ -128,11 +135,10 @@ class UserSearchDelegate extends SearchDelegate {
       return _buildEmptySearchState(context);
     }
 
-    final searchQuery = query.trim();
-    final suggestionsStream = FirebaseFirestore.instance
-        .collection('users')
-        .orderBy('displayname')
-        .startAt([searchQuery]).endAt([searchQuery + '\uf8ff']).snapshots();
+    final searchQuery = query.trim().toLowerCase();
+    // Using a different approach for case-insensitive search
+    final suggestionsStream =
+        FirebaseFirestore.instance.collection('users').get().asStream();
 
     return StreamBuilder<QuerySnapshot>(
       stream: suggestionsStream,
@@ -144,13 +150,19 @@ class UserSearchDelegate extends SearchDelegate {
           return _buildErrorState(context, snapshot.error);
         }
 
-        final users = snapshot.data?.docs ?? [];
+        final allUsers = snapshot.data?.docs ?? [];
+        // Filter users whose displayname contains the search query (case insensitive)
+        final filteredUsers = allUsers.where((doc) {
+          final displayname =
+              (doc['displayname'] as String?)?.toLowerCase() ?? '';
+          return displayname.contains(searchQuery);
+        }).toList();
 
-        if (users.isEmpty) {
+        if (filteredUsers.isEmpty) {
           return _buildNoResultsState(context);
         }
 
-        return _buildUserList(context, users);
+        return _buildUserList(context, filteredUsers);
       },
     );
   }
@@ -186,11 +198,21 @@ class UserSearchDelegate extends SearchDelegate {
           child: ListTile(
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              radius: 26,
-              backgroundColor: Colors.grey[300],
-              backgroundImage:
-                  NetworkImage(user['photoURL'] ?? 'https://picsum.photos/200'),
+            leading: GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        OtherUserProfileScreen(userId: user.id),
+                  ),
+                );
+              },
+              child: CircleAvatar(
+                radius: 26,
+                backgroundColor: Colors.grey[300],
+                backgroundImage: NetworkImage(
+                    user['photoURL'] ?? 'https://picsum.photos/200'),
+              ),
             ),
             title: Text(
               user['displayname'] ?? 'User',
@@ -207,38 +229,69 @@ class UserSearchDelegate extends SearchDelegate {
                 fontSize: 14,
               ),
             ),
-            trailing: StatefulBuilder(
-              builder: (context, setState) {
-                return ElevatedButton(
-                  onPressed: () async {
-                    await _toggleFollow(user.id, isFollowing);
-                    setState(() {
-                      isFollowing = !isFollowing;
-                    });
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => OtherUserProfileScreen(userId: user.id),
+                ),
+              );
+            },
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Message Button
+                IconButton(
+                  icon: Icon(
+                    Icons.chat_bubble_outline,
+                    color: isDark ? Colors.white70 : Colors.blueAccent,
+                  ),
+                  onPressed: () {
+                    // Navigate to messaging page with recipient info
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => MessagingPage(
+                          recipientId: user.id,
+                        ),
+                      ),
+                    );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isFollowing
-                        ? (isDark ? Colors.grey[800] : Colors.grey[200])
-                        : (isDark ? Colors.blueAccent : Colors.blue),
-                    foregroundColor: isFollowing
-                        ? (isDark ? Colors.white70 : Colors.black87)
-                        : Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    elevation: isFollowing ? 0 : 2,
-                  ),
-                  child: Text(
-                    isFollowing ? 'Following' : 'Follow',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                );
-              },
+                ),
+                const SizedBox(width: 8),
+                // Follow Button
+                StatefulBuilder(
+                  builder: (context, setState) {
+                    return ElevatedButton(
+                      onPressed: () async {
+                        await _toggleFollow(user.id, isFollowing);
+                        setState(() {
+                          isFollowing = !isFollowing;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isFollowing
+                            ? (isDark ? Colors.grey[800] : Colors.grey[200])
+                            : (isDark ? Colors.blueAccent : Colors.blue),
+                        foregroundColor: isFollowing
+                            ? (isDark ? Colors.white70 : Colors.black87)
+                            : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        elevation: isFollowing ? 0 : 2,
+                      ),
+                      child: Text(
+                        isFollowing ? 'Following' : 'Follow',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         );

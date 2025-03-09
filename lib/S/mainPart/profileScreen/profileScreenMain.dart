@@ -34,6 +34,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
     final selectedEmoji = ref.watch(selectedEmojiProvider);
+    final refreshing = ref.watch(refreshingProvider);
 
     final primaryColor =
         darkThemeMain ? Colors.orangeAccent : Colors.deepOrange;
@@ -46,9 +47,10 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
         child: RefreshIndicator(
           color: primaryColor,
           onRefresh: () async {
-            setState(() {});
+            ref.read(refreshingProvider.notifier).state = !refreshing;
           },
           child: FutureBuilder<DocumentSnapshot>(
+            key: ValueKey(refreshing),
             future: FirebaseFirestore.instance
                 .collection('users')
                 .doc(auth.currentUser?.uid)
@@ -252,7 +254,8 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                         Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              // Edit profile action
+                              // Fix: Connect the button to the editProfile method in the controller
+                              _controller.editProfile(context, ref);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
