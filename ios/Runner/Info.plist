@@ -2,28 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-<key>NSPhotoLibraryUsageDescription</key>
-<string>This app requires access to the photo library.</string>
-<key>NSMicrophoneUsageDescription</key>
-<string>This app does not require access to the microphone.</string>
-<key>NSCameraUsageDescription</key>
-<string>This app requires access to the camera.</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
-	<key>GIDClientID</key>
-	<string>527109492721-isuplbtns9q5rmr7980qti0u02ggogsd.apps.googleusercontent.com</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-	<dict>
-		<key>CFBundleURLSchemes</key>
-		<array>
-		<string>com.googleusercontent.apps.527109492721-isuplbtns9q5rmr7980qti0u02ggogsd</string>
-		</array>
-	</dict>
-	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -44,12 +22,41 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.527109492721-isuplbtns9q5rmr7980qti0u02ggogsd</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GIDClientID</key>
+	<string>527109492721-isuplbtns9q5rmr7980qti0u02ggogsd.apps.googleusercontent.com</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Media library is used to show and play content in the app</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera is used to take photos for profile picture and posts</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Microphone is used for recording voice notes and video content</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photo library is used to select photos for profile picture and posts</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
