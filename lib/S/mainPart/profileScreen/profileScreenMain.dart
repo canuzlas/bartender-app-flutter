@@ -1,4 +1,3 @@
-import 'package:bartender/S/mainPart/profileScreen/emojiesButtons.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,10 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
-import 'package:bartender/S/mainPart/homeScreen/homeScreenController.dart';
 import 'package:bartender/S/mainPart/profileScreen/profileScreenController.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/scheduler.dart';
 
 class Profilescreenmain extends ConsumerStatefulWidget {
   const Profilescreenmain({super.key});

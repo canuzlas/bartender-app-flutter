@@ -1,5 +1,4 @@
 import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
-import 'package:bartender/S/mainPart/discoverScreen/discoverScreenModel.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverScreenState.dart';
 import 'package:bartender/S/mainPart/discoverScreen/discoverPageController.dart';
 import 'package:bartender/S/mainPart/discoverScreen/searchDelegate.dart';
@@ -9,8 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 
 final FirebaseAuth auth = FirebaseAuth.instance;
 

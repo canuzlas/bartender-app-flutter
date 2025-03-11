@@ -22,7 +22,7 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
   static final List<Widget> _widgetOptions = <Widget>[
     const HomeScreenMain(),
     const MsgScreenMain(),
-    DiscoveryScreenMain(),
+    const DiscoveryScreenMain(),
     const AiChatScreenMain(),
     const Profilescreenmain(),
     const Center(child: Text('Messages Page', style: optionStyle)),

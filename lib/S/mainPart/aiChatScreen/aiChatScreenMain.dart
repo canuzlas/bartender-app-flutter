@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 class AiChatScreenMain extends ConsumerStatefulWidget {
-  const AiChatScreenMain({Key? key}) : super(key: key);
+  const AiChatScreenMain({super.key});
 
   @override
   ConsumerState<AiChatScreenMain> createState() => _AiChatScreenMainState();
@@ -862,10 +862,10 @@ class _DotTypingIndicator extends StatefulWidget {
   final Color color;
 
   const _DotTypingIndicator({
-    Key? key,
+    super.key,
     required this.position,
     required this.color,
-  }) : super(key: key);
+  });
 
   @override
   State<_DotTypingIndicator> createState() => _DotTypingIndicatorState();

@@ -216,7 +216,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       }
     } catch (e) {
       print('Error creating assistant thread: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -461,7 +461,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       }
     } catch (e) {
       print('Error adding message to thread: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -496,7 +496,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       return data['id'];
     } catch (e) {
       print('Error running assistant: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -578,7 +578,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       throw Exception('No assistant message found');
     } catch (e) {
       print('Error waiting for assistant response: $e');
-      throw e;
+      rethrow;
     }
   }
 
