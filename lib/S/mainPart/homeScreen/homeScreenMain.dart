@@ -30,7 +30,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
             if (posts.isEmpty) {
               return Center(
                 child: Container(
-                  padding: EdgeInsets.all(30),
+                  padding: const EdgeInsets.all(30),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -39,7 +39,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                         size: 70,
                         color: darkThemeMain ? Colors.white38 : Colors.black26,
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       Text(
                         langMain == "tr"
                             ? 'Kimseyi takip etmiyorsunuz.'
@@ -52,7 +52,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                               darkThemeMain ? Colors.white70 : Colors.black54,
                         ),
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: () {
                           showSearch(
@@ -66,7 +66,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                               : Colors.deepOrange,
                           foregroundColor: Colors.white,
                           elevation: 2,
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
@@ -76,7 +76,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                           langMain == "tr"
                               ? 'Kişileri Keşfet'
                               : 'Discover People',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -89,13 +89,14 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
             }
             return RefreshIndicator(
               color: darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
-              backgroundColor: darkThemeMain ? Color(0xFF2D2D2D) : Colors.white,
+              backgroundColor:
+                  darkThemeMain ? const Color(0xFF2D2D2D) : Colors.white,
               onRefresh: () async {
                 ref.refresh(sortedTweetsProvider);
               },
               child: ListView.builder(
-                padding: EdgeInsets.only(top: 8, bottom: 20),
-                physics: AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: 8, bottom: 20),
+                physics: const AlwaysScrollableScrollPhysics(),
                 itemCount: posts.length,
                 itemBuilder: (context, index) {
                   final post = posts[index];
@@ -117,12 +118,12 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.error_outline,
                     color: Colors.red,
                     size: 60,
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'Failed to load posts',
                     style: TextStyle(
@@ -131,7 +132,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                       color: darkThemeMain ? Colors.white : Colors.black,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     error.toString(),
                     textAlign: TextAlign.center,
@@ -139,7 +140,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                       color: darkThemeMain ? Colors.white70 : Colors.black54,
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () => ref.refresh(sortedTweetsProvider),
                     style: ElevatedButton.styleFrom(
@@ -147,7 +148,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                           ? Colors.orangeAccent
                           : Colors.deepOrange,
                     ),
-                    child: Text('Retry'),
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -173,7 +174,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
   // Improved post card with better styling
   Widget _buildPostCard(dynamic post) {
     final postData = post.data() as Map<String, dynamic>?;
-    if (postData == null) return SizedBox.shrink();
+    if (postData == null) return const SizedBox.shrink();
 
     final darkThemeMain = ref.watch(darkTheme);
     final isLiked = ref.watch(likeProvider(post.id));
@@ -192,7 +193,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
           width: 0.5,
         ),
       ),
-      color: darkThemeMain ? Color(0xFF252525) : Colors.white,
+      color: darkThemeMain ? const Color(0xFF252525) : Colors.white,
       elevation: 2,
       shadowColor: darkThemeMain ? Colors.black : Colors.black38,
       child: Column(
@@ -210,9 +211,10 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                         currentUser.uid == postData['userId']) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('You cannot view your own profile'),
+                          content:
+                              const Text('You cannot view your own profile'),
                           behavior: SnackBarBehavior.floating,
-                          margin: EdgeInsets.all(16),
+                          margin: const EdgeInsets.all(16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -244,7 +246,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +260,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                                 if (currentUser != null &&
                                     currentUser.uid == postData['userId']) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
+                                    const SnackBar(
                                       content: Text(
                                           'You cannot view your own profile'),
                                       behavior: SnackBarBehavior.floating,
@@ -294,7 +296,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                           ),
                         ],
                       ),
-                      SizedBox(height: 6),
+                      const SizedBox(height: 6),
                       Text(
                         postData['message'] ?? '',
                         style: TextStyle(
@@ -313,7 +315,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
           // Post image
           if (hasImage)
             Container(
-              margin: EdgeInsets.symmetric(horizontal: 12),
+              margin: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
@@ -339,7 +341,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                       height: 220,
                       color:
                           darkThemeMain ? Colors.grey[800] : Colors.grey[200],
-                      child: Center(child: CircularProgressIndicator()),
+                      child: const Center(child: CircularProgressIndicator()),
                     );
                   },
                   errorBuilder: (context, error, stackTrace) {
@@ -374,7 +376,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
                   onPressed: () =>
                       ref.read(likeProvider(post.id).notifier).toggleLike(),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 // Comment button
                 _buildActionButton(
                   icon: Icons.comment_outlined,
@@ -403,7 +405,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
     required bool darkTheme,
     required VoidCallback onPressed,
   }) {
-    final Color activeColor = Colors.redAccent;
+    const Color activeColor = Colors.redAccent;
     final Color inactiveColor =
         darkTheme ? Colors.grey[400]! : Colors.grey[600]!;
 
@@ -419,7 +421,7 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain> {
               color: isActive ? activeColor : inactiveColor,
               size: 20,
             ),
-            SizedBox(width: 6),
+            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(

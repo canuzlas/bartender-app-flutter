@@ -42,7 +42,8 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
     final secondaryTextColor = darkThemeMain ? Colors.white70 : Colors.black87;
 
     return Scaffold(
-      backgroundColor: darkThemeMain ? Color(0xFF121212) : Colors.grey[50],
+      backgroundColor:
+          darkThemeMain ? const Color(0xFF121212) : Colors.grey[50],
       body: SafeArea(
         child: RefreshIndicator(
           color: primaryColor,
@@ -67,7 +68,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
               final userData = userDoc?.data() as Map<String, dynamic>?;
 
               if (userData == null) {
-                return Center(child: Text('User data not found.'));
+                return const Center(child: Text('User data not found.'));
               }
 
               return Column(
@@ -95,9 +96,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             children: [
                               Text(
                                 selectedEmoji,
-                                style: TextStyle(fontSize: 24),
+                                style: const TextStyle(fontSize: 24),
                               ),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
                                 userData['displayname'],
                                 style: TextStyle(
@@ -109,7 +110,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             ],
                           ),
                         ),
-                        Spacer(),
+                        const Spacer(),
                         IconButton(
                           iconSize: 24,
                           color: textColor,
@@ -136,7 +137,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                                 children: [
                                   Icon(CupertinoIcons.settings,
                                       color: textColor),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Text(langMain == 'tr'
                                       ? 'Ayarlar'
                                       : 'Settings'),
@@ -148,7 +149,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                               child: Row(
                                 children: [
                                   Icon(Icons.logout, color: textColor),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Text(langMain == 'tr' ? 'Çıkış' : 'Logout'),
                                 ],
                               ),
@@ -250,7 +251,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             color: secondaryTextColor,
                           ),
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Center(
                           child: ElevatedButton(
                             onPressed: () {
@@ -261,7 +262,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                               backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
                               elevation: 3,
-                              minimumSize: Size(200, 40),
+                              minimumSize: const Size(200, 40),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20.0),
                               ),
@@ -271,7 +272,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                               langMain == "tr"
                                   ? "Profili Düzenle"
                                   : "Edit Profile",
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -282,7 +283,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                     ),
                   ),
                   // Tabs with improved styling
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Expanded(
                     child: DefaultTabController(
                       length: 2,
@@ -293,7 +294,8 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             unselectedLabelColor: secondaryTextColor,
                             indicatorColor: primaryColor,
                             indicatorWeight: 3,
-                            labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                            labelStyle:
+                                const TextStyle(fontWeight: FontWeight.bold),
                             tabs: [
                               Tab(
                                   text: langMain == "tr"
@@ -377,7 +379,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
               color: textColor,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
@@ -482,13 +484,13 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                 borderRadius: BorderRadius.circular(15.0),
               ),
               elevation: 3,
-              color: darkTheme ? Color(0xFF1E1E1E) : Colors.white,
+              color: darkTheme ? const Color(0xFF1E1E1E) : Colors.white,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ListTile(
                     contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     leading: CircleAvatar(
                       backgroundImage: NetworkImage(postData['userPhotoURL'] ??
                           'https://picsum.photos/200'),
@@ -519,7 +521,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          constraints: BoxConstraints(
+                          constraints: const BoxConstraints(
                             maxHeight: 300,
                           ),
                           width: double.infinity,
@@ -528,7 +530,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             fit: BoxFit.cover,
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
-                              return Container(
+                              return SizedBox(
                                 height: 200,
                                 child: Center(
                                   child: CircularProgressIndicator(
@@ -547,7 +549,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                               return Container(
                                 height: 100,
                                 color: Colors.grey[300],
-                                child: Center(
+                                child: const Center(
                                   child: Icon(
                                     Icons.error_outline,
                                     color: Colors.red,
@@ -582,7 +584,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain> {
                             color: secondaryTextColor,
                           ),
                         ),
-                        SizedBox(width: 16),
+                        const SizedBox(width: 16),
                         IconButton(
                           icon: Icon(
                             CupertinoIcons.chat_bubble,

@@ -283,7 +283,7 @@ class UserSearchDelegate extends SearchDelegate {
                       ),
                       child: Text(
                         isFollowing ? 'Following' : 'Follow',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),

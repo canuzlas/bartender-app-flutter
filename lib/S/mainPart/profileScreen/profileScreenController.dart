@@ -55,7 +55,7 @@ class ProfileScreenController {
         ),
         title: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.delete_outline,
               color: Colors.red,
               size: 28,
@@ -176,7 +176,7 @@ class ProfileScreenController {
       // Close loading dialog
       Navigator.of(context).pop();
 
-      final userData = userDoc.data() as Map<String, dynamic>?;
+      final userData = userDoc.data();
       if (userData == null) {
         _showErrorDialog(
             context,
@@ -274,12 +274,12 @@ class ProfileScreenController {
                                       imageUrl ?? 'https://picsum.photos/200'),
                             ),
                             Container(
-                              padding: EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
                                 color: accentColor,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.camera_alt,
                                 color: Colors.white,
                                 size: 20,
@@ -288,7 +288,7 @@ class ProfileScreenController {
                           ],
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextField(
                         controller: nameController,
                         style: TextStyle(color: textColor),
@@ -306,7 +306,7 @@ class ProfileScreenController {
                           ),
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextField(
                         controller: bioController,
                         style: TextStyle(color: textColor),
@@ -455,7 +455,7 @@ class ProfileScreenController {
                     ),
                     child: Text(
                       langMain == 'tr' ? 'Kaydet' : 'Save',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -537,9 +537,9 @@ class ProfileScreenController {
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: Text(
+            child: const Text(
               'Cancel',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           TextButton(
@@ -550,9 +550,9 @@ class ProfileScreenController {
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: Text(
+            child: const Text(
               'Logout',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -731,7 +731,7 @@ class ProfileScreenController {
                 ? 'Emoji güncellendi'
                 : 'Emoji updated successfully',
           ),
-          duration: Duration(seconds: 1),
+          duration: const Duration(seconds: 1),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -748,7 +748,7 @@ class ProfileScreenController {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
             shrinkWrap: true,
@@ -786,7 +786,7 @@ class ProfileScreenController {
                     ),
                     title: Text(userData['displayname'] ?? 'Unknown'),
                     trailing: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
+                      icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () async {
                         await FirebaseFirestore.instance
                             .collection('users')
@@ -811,7 +811,7 @@ class ProfileScreenController {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close'),
+            child: const Text('Close'),
           ),
         ],
       ),

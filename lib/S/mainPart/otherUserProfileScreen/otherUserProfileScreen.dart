@@ -10,8 +10,7 @@ import 'package:intl/intl.dart';
 class OtherUserProfileScreen extends ConsumerWidget {
   final String userId;
 
-  const OtherUserProfileScreen({Key? key, required this.userId})
-      : super(key: key);
+  const OtherUserProfileScreen({super.key, required this.userId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -300,8 +299,7 @@ class OtherUserProfileScreen extends ConsumerWidget {
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final tweet = tweets[index];
-                              final tweetData =
-                                  tweet.data() as Map<String, dynamic>;
+                              final tweetData = tweet.data();
                               final likeCount = tweetData['likes'] ?? 0;
                               final commentCount = tweetData['comments'] ?? 0;
                               final postPhotoURL = tweetData['photoURL'];
@@ -401,8 +399,10 @@ class OtherUserProfileScreen extends ConsumerWidget {
                                                           ? Colors.red
                                                           : null,
                                                       onTap: () async {
-                                                        if (currentUser == null)
+                                                        if (currentUser ==
+                                                            null) {
                                                           return;
+                                                        }
                                                         if (!isLiked) {
                                                           await tweet.reference
                                                               .update({
@@ -477,7 +477,7 @@ class OtherUserProfileScreen extends ConsumerWidget {
                           child: CircularProgressIndicator(),
                         ),
                       )),
-                      error: (error, stack) => SliverToBoxAdapter(
+                      error: (error, stack) => const SliverToBoxAdapter(
                           child: Padding(
                         padding: EdgeInsets.all(32.0),
                         child: Center(

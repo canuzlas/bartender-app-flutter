@@ -56,8 +56,8 @@ class HomeScreenController {
         final fileSize = await file.length();
         const maxSize = 10 * 1024 * 1024; // 10MB
         if (fileSize > maxSize) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Selected image exceeds 10MB limit')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Selected image exceeds 10MB limit')));
           return;
         }
         ref.read(newPostProvider.notifier).setSelectedImage(file);
@@ -73,8 +73,8 @@ class HomeScreenController {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDarkTheme ? Color(0xFF252525) : Colors.white,
-      shape: RoundedRectangleBorder(
+      backgroundColor: isDarkTheme ? const Color(0xFF252525) : Colors.white,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) => SafeArea(
@@ -82,7 +82,7 @@ class HomeScreenController {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              margin: EdgeInsets.symmetric(vertical: 10),
+              margin: const EdgeInsets.symmetric(vertical: 10),
               width: 40,
               height: 4,
               decoration: BoxDecoration(
@@ -95,7 +95,7 @@ class HomeScreenController {
                 backgroundColor: isDarkTheme
                     ? Colors.blue.withOpacity(0.2)
                     : Colors.blue.withOpacity(0.1),
-                child: Icon(Icons.photo_library, color: Colors.blue),
+                child: const Icon(Icons.photo_library, color: Colors.blue),
               ),
               title: Text(
                 'Gallery',
@@ -113,7 +113,7 @@ class HomeScreenController {
                 backgroundColor: isDarkTheme
                     ? Colors.green.withOpacity(0.2)
                     : Colors.green.withOpacity(0.1),
-                child: Icon(Icons.camera_alt, color: Colors.green),
+                child: const Icon(Icons.camera_alt, color: Colors.green),
               ),
               title: Text(
                 'Camera',
@@ -126,7 +126,7 @@ class HomeScreenController {
                 _pickImage(ImageSource.camera, context, ref);
               },
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
           ],
         ),
       ),
@@ -135,13 +135,13 @@ class HomeScreenController {
 
   // Build new post dialog without StatefulBuilder, using provider state.
   void showNewPostDialog(bool darkThemeMain, String langMain, context, ref) {
-    final _textController = TextEditingController();
+    final textController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
-        backgroundColor: darkThemeMain ? Color(0xFF252525) : Colors.white,
+        backgroundColor: darkThemeMain ? const Color(0xFF252525) : Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -170,7 +170,7 @@ class HomeScreenController {
                   )
                 ],
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Consumer(builder: (context, ref, child) {
                 final newPostState = ref.watch(newPostProvider);
                 return Column(
@@ -180,7 +180,7 @@ class HomeScreenController {
                     Container(
                       decoration: BoxDecoration(
                         color: darkThemeMain
-                            ? Color(0xFF303030)
+                            ? const Color(0xFF303030)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
@@ -190,7 +190,7 @@ class HomeScreenController {
                         ),
                       ),
                       child: TextField(
-                        controller: _textController,
+                        controller: textController,
                         maxLines: 5,
                         style: TextStyle(
                           color: darkThemeMain ? Colors.white : Colors.black,
@@ -204,12 +204,12 @@ class HomeScreenController {
                                 ? Colors.grey[400]
                                 : Colors.grey[600],
                           ),
-                          contentPadding: EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                           border: InputBorder.none,
                         ),
                       ),
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     if (newPostState.selectedImage != null)
                       GestureDetector(
                         onTap: () => _showFullImage(context, ref),
@@ -234,14 +234,14 @@ class HomeScreenController {
                           ),
                         ),
                       ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () =>
                                 _showImageSourceActionSheet(context, ref),
-                            icon: Icon(Icons.photo_library),
+                            icon: const Icon(Icons.photo_library),
                             label: Text(
                               langMain == "tr" ? 'Fotoğraf Seç' : 'Add Photo',
                             ),
@@ -253,18 +253,18 @@ class HomeScreenController {
                                     ? Colors.grey[700]!
                                     : Colors.grey[300]!,
                               ),
-                              padding: EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
                             ),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () async {
-                              if (_textController.text.trim().isEmpty) {
+                              if (textController.text.trim().isEmpty) {
                                 if (ref.read(newPostProvider).selectedImage !=
                                     null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -339,7 +339,7 @@ class HomeScreenController {
                                           'Unknown User',
                                       'userPhotoURL':
                                           userData['photoURL'] ?? '',
-                                      'message': _textController.text,
+                                      'message': textController.text,
                                       'timestamp': Timestamp.now(),
                                       'likedBy': [],
                                       'photoURL': photoURL,
@@ -357,7 +357,7 @@ class HomeScreenController {
                                       'userId': userId,
                                       'userName': userName ?? 'Unknown User',
                                       'userPhotoURL': userPhotoURL ?? '',
-                                      'message': _textController.text,
+                                      'message': textController.text,
                                       'timestamp': Timestamp.now(),
                                       'likedBy': [],
                                       'photoURL': photoURL,
@@ -388,14 +388,14 @@ class HomeScreenController {
                                   : Colors.deepOrange,
                               foregroundColor: Colors.white,
                               elevation: 0,
-                              padding: EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
                             ),
                             child: Text(
                               langMain == "tr" ? 'Gönder' : 'Post',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
                               ),
@@ -417,7 +417,7 @@ class HomeScreenController {
                                       : Colors.deepOrange,
                                 ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
                                 langMain == "tr"
                                     ? 'Yükleniyor...'
@@ -452,7 +452,7 @@ class HomeScreenController {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        insetPadding: EdgeInsets.all(16),
+        insetPadding: const EdgeInsets.all(16),
         backgroundColor: Colors.transparent,
         child: Stack(
           alignment: Alignment.topRight,
@@ -476,7 +476,7 @@ class HomeScreenController {
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   iconSize: 16,
-                  icon: Icon(Icons.close, color: Colors.white),
+                  icon: const Icon(Icons.close, color: Colors.white),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -497,7 +497,7 @@ class HomeScreenController {
           appBar: AppBar(
             backgroundColor: Colors.black,
             elevation: 0,
-            iconTheme: IconThemeData(color: Colors.white),
+            iconTheme: const IconThemeData(color: Colors.white),
           ),
           body: Center(
             child: InteractiveViewer(
@@ -518,7 +518,7 @@ class HomeScreenController {
   void sharePost(BuildContext context, Map<String, dynamic> postData) {
     // Placeholder for share functionality
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Sharing functionality would go here'),
         behavior: SnackBarBehavior.floating,
       ),

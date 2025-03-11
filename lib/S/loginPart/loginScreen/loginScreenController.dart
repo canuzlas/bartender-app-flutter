@@ -20,7 +20,7 @@ class Loginscreencontroller {
 
     if (googleUser != null) {
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication? googleAuth =
+      final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
       // Create a new credential

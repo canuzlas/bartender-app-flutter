@@ -305,7 +305,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
 
           return Container(
             height: MediaQuery.of(context).size.height * 0.7,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(20),
@@ -322,7 +322,8 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
             child: Column(
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -332,7 +333,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
                     ),
@@ -342,7 +343,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
+                          const Text(
                             'Select a GIF',
                             style: TextStyle(
                               color: Colors.white,
@@ -351,12 +352,12 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.close, color: Colors.white),
+                            icon: const Icon(Icons.close, color: Colors.white),
                             onPressed: () => Navigator.pop(context),
                           ),
                         ],
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
@@ -364,15 +365,15 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                         ),
                         child: TextField(
                           controller: searchController,
-                          style: TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: 'Search GIFs...',
-                            hintStyle: TextStyle(color: Colors.white70),
+                            hintStyle: const TextStyle(color: Colors.white70),
                             prefixIcon:
-                                Icon(Icons.search, color: Colors.white70),
+                                const Icon(Icons.search, color: Colors.white70),
                             suffixIcon: searchController.text.isNotEmpty
                                 ? IconButton(
-                                    icon: Icon(Icons.clear,
+                                    icon: const Icon(Icons.clear,
                                         color: Colors.white70),
                                     onPressed: () {
                                       searchController.clear();
@@ -381,7 +382,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                   )
                                 : null,
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
+                            contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 12,
                             ),
@@ -399,7 +400,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                 ),
                 Expanded(
                   child: isLoading
-                      ? Center(
+                      ? const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -427,7 +428,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                     size: 48,
                                     color: Colors.grey[400],
                                   ),
-                                  SizedBox(height: 12),
+                                  const SizedBox(height: 12),
                                   Text(
                                     searchController.text.isEmpty
                                         ? 'No trending GIFs available'
@@ -437,14 +438,14 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                       color: Colors.grey[700],
                                     ),
                                   ),
-                                  SizedBox(height: 20),
+                                  const SizedBox(height: 20),
                                   if (searchController.text.isNotEmpty)
                                     TextButton(
                                       onPressed: () {
                                         searchController.clear();
                                         fetchTrendingGifs(setModalState);
                                       },
-                                      child: Text(
+                                      child: const Text(
                                         'Show trending GIFs',
                                         style: TextStyle(
                                           color: Colors.deepPurple,
@@ -465,9 +466,9 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                 }
                               },
                               child: GridView.builder(
-                                padding: EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(12),
                                 gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
                                   childAspectRatio: 1.0,
                                   crossAxisSpacing: 10,
@@ -787,7 +788,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
@@ -801,16 +802,16 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
             context: context,
             builder: (BuildContext context) {
               return AlertDialog(
-                title: Text('Delete Conversation'),
-                content:
-                    Text('Are you sure you want to delete this conversation?'),
+                title: const Text('Delete Conversation'),
+                content: const Text(
+                    'Are you sure you want to delete this conversation?'),
                 actions: <Widget>[
                   TextButton(
-                    child: Text('Cancel'),
+                    child: const Text('Cancel'),
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
                   TextButton(
-                    child: Text(
+                    child: const Text(
                       'Delete',
                       style: TextStyle(color: Colors.red),
                     ),
@@ -836,7 +837,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Conversation deleted successfully'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
@@ -898,7 +899,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                const Text(
                   'React to this message',
                   style: TextStyle(
                     fontSize: 18,
@@ -907,7 +908,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                   ),
                 ),
                 const SizedBox(height: 16),
-                Container(
+                SizedBox(
                   height: 70,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
@@ -931,7 +932,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                           ),
                           child: Center(
                             child: Text(_emojiOptions[index],
-                                style: TextStyle(fontSize: 30)),
+                                style: const TextStyle(fontSize: 30)),
                           ),
                         ),
                       );
@@ -942,12 +943,13 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
+                    child: const Text(
                       'Cancel',
                       style: TextStyle(
                         color: Colors.white,
@@ -1056,7 +1058,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: recipientDataAsync.when(
@@ -1103,13 +1105,13 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                       children: [
                         Text(
                           data?['displayname'] ?? "Chat",
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
-                        Text(
+                        const Text(
                           'Online',
                           style: TextStyle(
                             fontSize: 12,
@@ -1128,11 +1130,11 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
               Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white24,
                   shape: BoxShape.circle,
                 ),
-                child: Center(
+                child: const Center(
                   child: SizedBox(
                     width: 18,
                     height: 18,
@@ -1143,8 +1145,8 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                   ),
                 ),
               ),
-              SizedBox(width: 10),
-              Text(
+              const SizedBox(width: 10),
+              const Text(
                 "Loading...",
                 style: TextStyle(
                   color: Colors.white,
@@ -1164,23 +1166,24 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
         actions: [
           IconButton(
             icon: Container(
-              padding: EdgeInsets.all(5),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(5),
+              decoration: const BoxDecoration(
                 color: Colors.white24,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.delete, color: Colors.white, size: 20),
+              child: const Icon(Icons.delete, color: Colors.white, size: 20),
             ),
             onPressed: deleteAllMessages,
           ),
           IconButton(
             icon: Container(
-              padding: EdgeInsets.all(5),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(5),
+              decoration: const BoxDecoration(
                 color: Colors.white24,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.info_outline, color: Colors.white, size: 20),
+              child:
+                  const Icon(Icons.info_outline, color: Colors.white, size: 20),
             ),
             onPressed: () {},
           ),
@@ -1208,7 +1211,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(
+                    return const Center(
                       child: CircularProgressIndicator(
                         color: Colors.deepPurple,
                         strokeWidth: 3,
@@ -1223,7 +1226,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                         children: [
                           Icon(Icons.error_outline,
                               size: 60, color: Colors.grey[500]),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text(
                             'An error occurred',
                             style: TextStyle(
@@ -1245,18 +1248,20 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                       builder: (context, secondSnapshot) {
                         if (secondSnapshot.connectionState ==
                             ConnectionState.waiting) {
-                          return Center(child: CircularProgressIndicator());
+                          return const Center(
+                              child: CircularProgressIndicator());
                         }
 
                         if (!secondSnapshot.hasData ||
                             !secondSnapshot.data!.exists) {
-                          return Center(child: Text('No messages yet'));
+                          return const Center(child: Text('No messages yet'));
                         }
 
                         var data = secondSnapshot.data!.data()
                             as Map<String, dynamic>?;
                         if (data == null || !data.containsKey('messageList')) {
-                          return Center(child: Text('Start a conversation'));
+                          return const Center(
+                              child: Text('Start a conversation'));
                         }
 
                         var messageList = List<Map<String, dynamic>>.from(
@@ -1272,7 +1277,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                         return ListView.builder(
                           reverse: false,
                           itemCount: messageList.length,
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           itemBuilder: (context, index) {
                             var message = messageList[index];
                             bool isCurrentUser =
@@ -1288,7 +1293,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                   left: isCurrentUser ? 64 : 0,
                                   right: isCurrentUser ? 0 : 64,
                                 ),
-                                padding: EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: isCurrentUser
                                       ? Colors.deepPurple
@@ -1326,9 +1331,9 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
 
                     return ListView.builder(
                       controller: _scrollController,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      physics: BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      physics: const BouncingScrollPhysics(),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final message = messages[index] as Map<String, dynamic>;
@@ -1368,7 +1373,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 16.0),
                                 child: Container(
-                                  padding: EdgeInsets.symmetric(
+                                  padding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.7),
@@ -1446,14 +1451,16 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                                       ],
                                                     ),
                                               borderRadius: BorderRadius.only(
-                                                topLeft: Radius.circular(18),
-                                                topRight: Radius.circular(18),
+                                                topLeft:
+                                                    const Radius.circular(18),
+                                                topRight:
+                                                    const Radius.circular(18),
                                                 bottomLeft: isMe
-                                                    ? Radius.circular(18)
-                                                    : Radius.circular(4),
+                                                    ? const Radius.circular(18)
+                                                    : const Radius.circular(4),
                                                 bottomRight: isMe
-                                                    ? Radius.circular(4)
-                                                    : Radius.circular(18),
+                                                    ? const Radius.circular(4)
+                                                    : const Radius.circular(18),
                                               ),
                                               boxShadow: [
                                                 BoxShadow(
@@ -1486,9 +1493,10 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                                                 (context, child,
                                                                     loadingProgress) {
                                                               if (loadingProgress ==
-                                                                  null)
+                                                                  null) {
                                                                 return child;
-                                                              return Container(
+                                                              }
+                                                              return SizedBox(
                                                                 height: 150,
                                                                 child: Center(
                                                                   child:
@@ -1570,13 +1578,15 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                                                           scale: scale,
                                                           child: Container(
                                                             padding:
-                                                                EdgeInsets.all(
-                                                                    4),
+                                                                const EdgeInsets
+                                                                    .all(4),
                                                             child: Text(
                                                               message[
                                                                   'reaction'],
-                                                              style: TextStyle(
-                                                                  fontSize: 20),
+                                                              style:
+                                                                  const TextStyle(
+                                                                      fontSize:
+                                                                          20),
                                                             ),
                                                           ),
                                                         );
@@ -1628,7 +1638,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                     color: Colors.black.withOpacity(0.05),
                     spreadRadius: 0,
                     blurRadius: 10,
-                    offset: Offset(0, -3),
+                    offset: const Offset(0, -3),
                   ),
                 ],
               ),
@@ -1664,12 +1674,12 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0),
                           child: TextField(
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.black87,
                               fontSize: 16,
                             ),
                             controller: _messageController,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               hintText: 'Type a message...',
                               hintStyle: TextStyle(color: Colors.black54),
                               border: InputBorder.none,
@@ -1680,7 +1690,7 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                         ),
                       ),
                       Container(
-                        margin: EdgeInsets.only(right: 8),
+                        margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -1693,7 +1703,8 @@ class _MessagingPageState extends ConsumerState<MessagingPage>
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: Icon(Icons.send_rounded, color: Colors.white),
+                          icon: const Icon(Icons.send_rounded,
+                              color: Colors.white),
                           onPressed: sendMessage,
                         ),
                       ),

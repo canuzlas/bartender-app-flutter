@@ -15,6 +15,8 @@ import 'dart:io';
 final FirebaseAuth auth = FirebaseAuth.instance;
 
 class DiscoveryScreenMain extends ConsumerStatefulWidget {
+  const DiscoveryScreenMain({super.key});
+
   @override
   _DiscoveryScreenMainState createState() => _DiscoveryScreenMainState();
 }
@@ -119,7 +121,7 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                       : Colors.grey.withOpacity(0.2),
                                   spreadRadius: 1,
                                   blurRadius: 5,
-                                  offset: Offset(0, 2),
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -138,7 +140,7 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                               tweet.userId) {
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
-                                              SnackBar(
+                                              const SnackBar(
                                                 content: Text(
                                                     'You cannot view your own profile'),
                                                 behavior:
@@ -243,8 +245,9 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                                         fit: BoxFit.cover,
                                         loadingBuilder:
                                             (context, child, loadingProgress) {
-                                          if (loadingProgress == null)
+                                          if (loadingProgress == null) {
                                             return child;
+                                          }
                                           return Container(
                                             height: 200,
                                             decoration: BoxDecoration(

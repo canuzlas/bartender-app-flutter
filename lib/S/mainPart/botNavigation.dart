@@ -21,11 +21,11 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
       TextStyle(fontSize: 30, fontWeight: FontWeight.w600);
   static final List<Widget> _widgetOptions = <Widget>[
     const HomeScreenMain(),
-    MsgScreenMain(),
+    const MsgScreenMain(),
     DiscoveryScreenMain(),
-    AiChatScreenMain(),
+    const AiChatScreenMain(),
     const Profilescreenmain(),
-    Center(child: Text('Messages Page', style: optionStyle)),
+    const Center(child: Text('Messages Page', style: optionStyle)),
   ];
 
   @override
@@ -49,7 +49,7 @@ class _BotnavigationState extends ConsumerState<Botnavigation> {
           width: 50,
           height: 50,
         ),
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,

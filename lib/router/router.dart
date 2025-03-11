@@ -22,7 +22,7 @@ class GeneratedRouter {
       case '/loginScreen':
         return MaterialPageRoute(builder: (context) => const Loginscreenmain());
       case '/botNavigation':
-        return MaterialPageRoute(builder: (context) => Botnavigation());
+        return MaterialPageRoute(builder: (context) => const Botnavigation());
     }
     return null;
   }

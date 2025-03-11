@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CommentsPage extends ConsumerWidget {
   final String tweetId;
-  CommentsPage({required this.tweetId});
+  const CommentsPage({super.key, required this.tweetId});
 
   String _timeAgo(DateTime dateTime) {
     final Duration difference = DateTime.now().difference(dateTime);
@@ -22,12 +22,12 @@ class CommentsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final darkThemeMain = ref.watch(darkTheme);
     final langMain = ref.watch(lang);
-    final TextEditingController _controller = TextEditingController();
+    final TextEditingController controller = TextEditingController();
     final String currentUserId = auth.currentUser!.uid;
 
     final themeColor = darkThemeMain ? Colors.grey[800] : Colors.white;
     final textColor = darkThemeMain ? Colors.white : Colors.black87;
-    final accentColor = Colors.blue;
+    const accentColor = Colors.blue;
 
     return Scaffold(
       backgroundColor: darkThemeMain ? Colors.black : Colors.grey[100],
@@ -38,7 +38,7 @@ class CommentsPage extends ConsumerWidget {
         centerTitle: true,
         title: Text(
           langMain == "tr" ? "Yorumlar" : 'Comments',
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -134,7 +134,7 @@ class CommentsPage extends ConsumerWidget {
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.05),
                                   blurRadius: 8,
-                                  offset: Offset(0, 2),
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -211,7 +211,7 @@ class CommentsPage extends ConsumerWidget {
                       child: TextField(
                         style: TextStyle(
                             color: darkThemeMain ? Colors.white : Colors.black),
-                        controller: _controller,
+                        controller: controller,
                         decoration: InputDecoration(
                           hintStyle: TextStyle(
                               color: darkThemeMain
@@ -240,17 +240,17 @@ class CommentsPage extends ConsumerWidget {
                         const BoxConstraints.tightFor(width: 40, height: 40),
                     icon: const Icon(Icons.send, color: Colors.white, size: 20),
                     onPressed: () {
-                      if (_controller.text.isNotEmpty) {
+                      if (controller.text.isNotEmpty) {
                         FirebaseFirestore.instance
                             .collection('tweets')
                             .doc(tweetId)
                             .collection('comments')
                             .add({
-                          'text': _controller.text,
+                          'text': controller.text,
                           'timestamp': Timestamp.now(),
                           'userId': currentUserId, // Add user ID to comment
                         });
-                        _controller.clear();
+                        controller.clear();
                       }
                     },
                   ),
@@ -285,12 +285,14 @@ class CommentsPage extends ConsumerWidget {
 
     // Determine card color based on theme and if it's user's comment
     final cardColor = darkTheme
-        ? (isCurrentUserComment ? Color(0xFF1E3A5F) : Color(0xFF212121))
-        : (isCurrentUserComment ? Color(0xFFE3F2FD) : Colors.white);
+        ? (isCurrentUserComment
+            ? const Color(0xFF1E3A5F)
+            : const Color(0xFF212121))
+        : (isCurrentUserComment ? const Color(0xFFE3F2FD) : Colors.white);
 
     // Accent color for current user's comment
     final accentLineColor =
-        isCurrentUserComment ? Color(0xFF4FC3F7) : Colors.transparent;
+        isCurrentUserComment ? const Color(0xFF4FC3F7) : Colors.transparent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -302,7 +304,7 @@ class CommentsPage extends ConsumerWidget {
             color: Colors.black.withOpacity(0.06),
             blurRadius: 8,
             spreadRadius: 0,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -316,7 +318,7 @@ class CommentsPage extends ConsumerWidget {
                 width: 4,
                 decoration: BoxDecoration(
                   color: accentLineColor,
-                  borderRadius: BorderRadius.only(
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     bottomLeft: Radius.circular(16),
                   ),
@@ -352,7 +354,7 @@ class CommentsPage extends ConsumerWidget {
                                 color: Colors.black.withOpacity(0.1),
                                 blurRadius: 4,
                                 spreadRadius: 0,
-                                offset: Offset(0, 1),
+                                offset: const Offset(0, 1),
                               ),
                             ],
                           ),

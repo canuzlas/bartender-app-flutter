@@ -50,7 +50,7 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
     }
   }
 
-  // Enhanced message bubble with better styling and shadows
+  // Enhanced message bubble with image support
   Widget _buildMessageBubble(ChatMessage message, bool darkThemeMain) {
     // Check if this is a typing indicator message
     if (message.text == "Rakun yazıyor..." ||
@@ -78,6 +78,133 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildTypingIndicator(darkThemeMain),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Error message with different styling
+    if (message.isError == true) {
+      return Align(
+        alignment: Alignment.center,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 280),
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: darkThemeMain ? Colors.red[900] : Colors.red[50],
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: darkThemeMain ? Colors.redAccent : Colors.red,
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withOpacity(0.1),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            message.text,
+            style: TextStyle(
+              color: darkThemeMain ? Colors.white : Colors.red[800],
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Message with image
+    if (message.imageUrl != null) {
+      return Align(
+        alignment:
+            message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 280),
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          decoration: BoxDecoration(
+            color: message.isUser
+                ? (darkThemeMain
+                    ? const Color(0xFFFF9800)
+                    : const Color(0xFFE65100))
+                : (darkThemeMain
+                    ? const Color(0xFF424242)
+                    : const Color(0xFFEEEEEE)),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(18),
+                ),
+                child: Image.network(
+                  message.imageUrl!,
+                  width: 280,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 150,
+                      width: 280,
+                      color:
+                          darkThemeMain ? Colors.grey[800] : Colors.grey[300],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                          color:
+                              darkThemeMain ? Colors.white70 : Colors.grey[600],
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 100,
+                      width: 280,
+                      color:
+                          darkThemeMain ? Colors.grey[800] : Colors.grey[300],
+                      child: Center(
+                        child: Icon(
+                          Icons.error_outline,
+                          color:
+                              darkThemeMain ? Colors.white70 : Colors.grey[600],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (message.text.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    message.text,
+                    style: TextStyle(
+                      color: message.isUser
+                          ? Colors.white
+                          : (darkThemeMain ? Colors.white : Colors.black87),
+                      fontSize: 16,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

@@ -32,7 +32,7 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                 color: darkThemeMain ? Colors.white : Colors.black,
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Expanded(
               flex: 3,
               child: GestureDetector(
@@ -41,13 +41,13 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                   ref.read(lang.notifier).state = "tr"
                 },
                 child: Container(
-                  margin: EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
                     color: darkThemeMain
                         ? const Color.fromRGBO(23, 21, 59, 1)
                         : const Color.fromRGBO(249, 247, 247, 1),
                     borderRadius: BorderRadius.circular(15.0),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
                         color: Colors.black45,
                         blurRadius: 15,
@@ -64,7 +64,7 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                         width: 150,
                         height: 150,
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         "TÜRKÇE",
                         style: TextStyle(
@@ -73,7 +73,7 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Text(
                         langMain == "tr" ? "[SEÇİLEN]" : "",
                         style: const TextStyle(
@@ -94,13 +94,13 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                   ref.read(lang.notifier).state = "en"
                 },
                 child: Container(
-                  margin: EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
                     color: darkThemeMain
                         ? const Color.fromRGBO(23, 21, 59, 1)
                         : const Color.fromRGBO(249, 247, 247, 1),
                     borderRadius: BorderRadius.circular(15.0),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
                         color: Colors.black45,
                         blurRadius: 15,
@@ -117,7 +117,7 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                         width: 150,
                         height: 150,
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         "ENGLISH",
                         style: TextStyle(
@@ -126,7 +126,7 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Text(
                         langMain == "en" ? "[CHOSEN]" : "",
                         style: const TextStyle(
@@ -152,13 +152,13 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                     width: 70,
                     height: 60,
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   Text(
                     langMain == "tr" ? "Devam Et" : "Continue",
                     style: TextStyle(
                       color: darkThemeMain
                           ? Colors.white
-                          : Color.fromRGBO(23, 21, 59, 1),
+                          : const Color.fromRGBO(23, 21, 59, 1),
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -180,7 +180,7 @@ class _SelectlangscreenmainState extends ConsumerState<Selectlangscreenmain> {
                       fontSize: 14,
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   Text(
                     langMain == "tr"
                         ? "Devam etmek için bir dil seçin."

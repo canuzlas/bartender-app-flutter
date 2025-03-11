@@ -23,7 +23,7 @@ class _LoginscreenmainState extends ConsumerState<Loginscreenmain> {
 
     return Scaffold(
       backgroundColor: darkThemeMain
-          ? Color.fromRGBO(23, 21, 59, 1)
+          ? const Color.fromRGBO(23, 21, 59, 1)
           : const Color.fromRGBO(249, 247, 247, 1),
       body: SafeArea(
         child: Center(
@@ -39,7 +39,7 @@ class _LoginscreenmainState extends ConsumerState<Loginscreenmain> {
                 width: 150,
                 height: 150,
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Title
               Text(
                 langMain == "tr" ? "Bartender" : "Bartender",
@@ -50,7 +50,7 @@ class _LoginscreenmainState extends ConsumerState<Loginscreenmain> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               // Subtitle
               Text(
                 langMain == "tr"
@@ -62,7 +62,7 @@ class _LoginscreenmainState extends ConsumerState<Loginscreenmain> {
                   color: darkThemeMain ? Colors.white70 : Colors.black87,
                 ),
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               // Google Sign In Button
               SignInButton(
                 darkThemeMain ? Buttons.Google : Buttons.GoogleDark,
@@ -73,7 +73,7 @@ class _LoginscreenmainState extends ConsumerState<Loginscreenmain> {
                   loginscreencontroller.signInWithGoogle(context);
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Footer
               Text(
                 langMain == "tr"

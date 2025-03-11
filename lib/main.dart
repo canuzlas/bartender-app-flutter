@@ -5,7 +5,6 @@ import 'package:bartender/mainSettings.dart';
 import 'package:bartender/notification/notificationMain.dart';
 import 'package:bartender/router/router.dart';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

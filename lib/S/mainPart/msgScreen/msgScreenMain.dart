@@ -83,7 +83,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
 
       // Show success message to user
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Conversation deleted successfully'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
@@ -93,7 +93,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
       print("Error deleting conversation: $e");
       // Show error message to user
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Failed to delete conversation'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 2),
@@ -123,7 +123,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
     });
 
     // Wait a bit to show the refresh indicator
-    await Future.delayed(Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 800));
 
     setState(() {
       _isRefreshing = false;
@@ -169,7 +169,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                 },
               ),
               leading: IconButton(
-                icon: Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back),
                 color: darkThemeMain ? Colors.white : Colors.black,
                 onPressed: () {
                   setState(() {
@@ -215,7 +215,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
                 !_isRefreshing) {
-              return Center(
+              return const Center(
                   child: CircularProgressIndicator(
                 color: Colors.deepPurple,
                 strokeWidth: 3,
@@ -229,14 +229,14 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'Something went wrong',
                     style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
                   TextButton(
                     onPressed: _refreshMessages,
-                    child: Text('Try Again',
+                    child: const Text('Try Again',
                         style: TextStyle(color: Colors.deepPurple)),
                   )
                 ],
@@ -249,26 +249,26 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.message, size: 80, color: Colors.grey[400]),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
                       'No messages yet',
                       style: TextStyle(fontSize: 20, color: Colors.grey[600]),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Start a conversation with someone',
                       style: TextStyle(fontSize: 16, color: Colors.grey[500]),
                     ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                     ElevatedButton.icon(
                       onPressed: () => _startNewChat(context),
-                      icon: Icon(Icons.chat, color: Colors.white),
-                      label: Text('Start New Chat'),
+                      icon: const Icon(Icons.chat, color: Colors.white),
+                      label: const Text('Start New Chat'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepPurple,
                         foregroundColor: Colors.white,
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                       ),
                     )
                   ],
@@ -313,12 +313,12 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
               builder: (context, AsyncSnapshot<void> userSnapshot) {
                 if (userSnapshot.connectionState == ConnectionState.waiting &&
                     !_isRefreshing) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (userSnapshot.hasError) {
                   print("Error: ${userSnapshot.error}");
-                  return Center(child: Text('An error occurred.'));
+                  return const Center(child: Text('An error occurred.'));
                 }
 
                 final usersList = usersMap.entries.toList()
@@ -344,13 +344,13 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                       children: [
                         Icon(Icons.search_off,
                             size: 70, color: Colors.grey[400]),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Text(
                           'No matches found',
                           style:
                               TextStyle(fontSize: 18, color: Colors.grey[600]),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'Try a different search term',
                           style:
@@ -362,9 +362,10 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                 }
 
                 return ListView.builder(
-                  physics: BouncingScrollPhysics(
+                  physics: const BouncingScrollPhysics(
                       parent: AlwaysScrollableScrollPhysics()),
-                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                   itemCount: filteredUsersList.length,
                   itemBuilder: (context, index) {
                     final user = filteredUsersList[index];
@@ -381,19 +382,19 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                              title: Text("Delete Conversation"),
-                              content: Text(
+                              title: const Text("Delete Conversation"),
+                              content: const Text(
                                   "Are you sure you want to delete this conversation?"),
                               actions: <Widget>[
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.of(context).pop(false),
-                                  child: Text("Cancel"),
+                                  child: const Text("Cancel"),
                                 ),
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.of(context).pop(true),
-                                  child: Text("Delete",
+                                  child: const Text("Delete",
                                       style: TextStyle(color: Colors.red)),
                                 ),
                               ],
@@ -405,14 +406,14 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                         deleteMessage(user.key);
                       },
                       background: Container(
-                        margin: EdgeInsets.symmetric(vertical: 4),
+                        margin: const EdgeInsets.symmetric(vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.red.shade800,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         alignment: Alignment.centerRight,
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: Row(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
@@ -429,15 +430,15 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                       child: GestureDetector(
                         onTap: () => openMessagingPage(context, user.key),
                         child: Container(
-                          margin:
-                              EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 4, horizontal: 4),
                           decoration: BoxDecoration(
                             color: isUnread
                                 ? (darkThemeMain
                                     ? Colors.deepPurple.withOpacity(0.15)
                                     : Colors.deepPurple.withOpacity(0.08))
                                 : (darkThemeMain
-                                    ? Color(0xFF2A2A2A)
+                                    ? const Color(0xFF2A2A2A)
                                     : Colors.white),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
@@ -445,7 +446,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                 color: Colors.black.withOpacity(0.08),
                                 spreadRadius: 0,
                                 blurRadius: 10,
-                                offset: Offset(0, 2),
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -464,7 +465,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                                 .withOpacity(0.2),
                                             spreadRadius: 1,
                                             blurRadius: 4,
-                                            offset: Offset(0, 1),
+                                            offset: const Offset(0, 1),
                                           ),
                                         ],
                                       ),
@@ -476,7 +477,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                                     .startsWith('http')
                                             ? NetworkImage(
                                                 user.value['profilePhoto'])
-                                            : AssetImage(
+                                            : const AssetImage(
                                                     'assets/openingPageDT.png')
                                                 as ImageProvider,
                                         radius: 30,
@@ -494,7 +495,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                             shape: BoxShape.circle,
                                             border: Border.all(
                                               color: darkThemeMain
-                                                  ? Color(0xFF2A2A2A)
+                                                  ? const Color(0xFF2A2A2A)
                                                   : Colors.white,
                                               width: 2,
                                             ),
@@ -503,7 +504,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                       ),
                                   ],
                                 ),
-                                SizedBox(width: 16),
+                                const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -535,9 +536,9 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          SizedBox(width: 8),
+                                          const SizedBox(width: 8),
                                           Container(
-                                            padding: EdgeInsets.symmetric(
+                                            padding: const EdgeInsets.symmetric(
                                               horizontal: 8,
                                               vertical: 4,
                                             ),
@@ -571,14 +572,15 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: 6),
+                                      const SizedBox(height: 6),
                                       Row(
                                         children: [
                                           if (user.value['senderId'] ==
                                               currentUserId)
                                             Container(
-                                              margin: EdgeInsets.only(right: 6),
-                                              padding: EdgeInsets.all(4),
+                                              margin: const EdgeInsets.only(
+                                                  right: 6),
+                                              padding: const EdgeInsets.all(4),
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
                                                 color: darkThemeMain
@@ -640,7 +642,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _startNewChat(context),
         backgroundColor: Colors.deepPurple,
-        child: Icon(Icons.chat, color: Colors.white),
+        child: const Icon(Icons.chat, color: Colors.white),
       ),
     );
   }

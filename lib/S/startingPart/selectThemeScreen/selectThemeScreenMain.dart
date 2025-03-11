@@ -25,7 +25,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Text(
                 langMain == "tr" ? "Tema Seçimi" : "Select Theme",
                 style: TextStyle(
@@ -34,18 +34,18 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
                   color: darkThemeMain ? Colors.white : Colors.black,
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               GestureDetector(
                 onTap: () => {
                   sss.setBool("darkTheme", true),
                   ref.read(darkTheme.notifier).state = true
                 },
                 child: Container(
-                  margin: EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
                     color: const Color.fromRGBO(23, 21, 59, 1),
                     borderRadius: BorderRadius.circular(15.0),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
                         color: Colors.black45,
                         blurRadius: 15,
@@ -62,7 +62,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
                         width: 150,
                         height: 150,
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         langMain == "tr" ? "Koyu Tema" : "Dark Theme",
                         style: const TextStyle(
@@ -71,7 +71,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Text(
                         darkThemeMain
                             ? langMain == "tr"
@@ -93,11 +93,11 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
                   ref.read(darkTheme.notifier).state = false
                 },
                 child: Container(
-                  margin: EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
                     color: const Color.fromRGBO(249, 247, 247, 1),
                     borderRadius: BorderRadius.circular(15.0),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
                         color: Colors.black45,
                         blurRadius: 15,
@@ -114,16 +114,16 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
                         width: 150,
                         height: 150,
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         langMain == "tr" ? "Açık Tema" : "Light Theme",
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Color.fromRGBO(23, 21, 59, 1),
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Text(
                         darkThemeMain
                             ? ""
@@ -149,13 +149,13 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
                       width: 70,
                       height: 60,
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     Text(
                       langMain == "tr" ? "Devam Et" : "Continue",
                       style: TextStyle(
                         color: darkThemeMain
                             ? Colors.white
-                            : Color.fromRGBO(23, 21, 59, 1),
+                            : const Color.fromRGBO(23, 21, 59, 1),
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -177,7 +177,7 @@ class _SelectthemescreenmainState extends ConsumerState<Selectthemescreenmain> {
                         fontSize: 14,
                       ),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     Text(
                       langMain == "tr"
                           ? "Devam etmek için bir tema seçin."

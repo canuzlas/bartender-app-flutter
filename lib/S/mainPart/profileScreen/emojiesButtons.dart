@@ -15,8 +15,7 @@ class EmojiButton extends StatefulWidget {
   final String emoji;
   final BuildContext context;
 
-  const EmojiButton({Key? key, required this.emoji, required this.context})
-      : super(key: key);
+  const EmojiButton({super.key, required this.emoji, required this.context});
 
   @override
   _EmojiButtonState createState() => _EmojiButtonState();
@@ -136,11 +135,11 @@ class CategorySelector extends StatelessWidget {
   final Function(int) onSelected;
 
   const CategorySelector({
-    Key? key,
+    super.key,
     required this.categories,
     required this.selectedIndex,
     required this.onSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -201,8 +200,7 @@ class CategorySelector extends StatelessWidget {
 class EmojiPickerPage extends StatefulWidget {
   final BuildContext parentContext;
 
-  const EmojiPickerPage({Key? key, required this.parentContext})
-      : super(key: key);
+  const EmojiPickerPage({super.key, required this.parentContext});
 
   @override
   _EmojiPickerPageState createState() => _EmojiPickerPageState();
@@ -210,7 +208,7 @@ class EmojiPickerPage extends StatefulWidget {
 
 class _EmojiPickerPageState extends State<EmojiPickerPage> {
   int _selectedCategoryIndex = 0;
-  String _searchQuery = "";
+  final String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
 
   // Define categories with emojis
