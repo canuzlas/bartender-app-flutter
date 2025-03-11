@@ -2,7 +2,9 @@ import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenModel.dart';
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenState.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 class AiChatScreenMain extends ConsumerStatefulWidget {
   const AiChatScreenMain({Key? key}) : super(key: key);
@@ -14,6 +16,7 @@ class AiChatScreenMain extends ConsumerStatefulWidget {
 class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
   late ScrollController _scrollController;
   late TextEditingController _controller;
+  bool _showSuggestions = true;
 
   @override
   void initState() {
@@ -205,6 +208,9 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
                     ),
                   ),
                 ),
+              // Add message actions for images
+              if (!message.isUser && message.messageId != null)
+                _buildMessageActions(message, darkThemeMain),
             ],
           ),
         ),
@@ -235,18 +241,248 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
             ),
           ],
         ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            color: message.isUser
-                ? Colors.white
-                : (darkThemeMain ? Colors.white : Colors.black87),
-            fontSize: 16,
-            height: 1.4,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message.text,
+              style: TextStyle(
+                color: message.isUser
+                    ? Colors.white
+                    : (darkThemeMain ? Colors.white : Colors.black87),
+                fontSize: 16,
+                height: 1.4,
+              ),
+            ),
+            // Only show actions for non-user, non-error messages
+            if (!message.isUser &&
+                message.messageId != null &&
+                !message.isError)
+              _buildMessageActions(message, darkThemeMain),
+          ],
         ),
       ),
     );
+  }
+
+  // Message action buttons (thumbs up/down, copy, share, bookmark)
+  Widget _buildMessageActions(ChatMessage message, bool darkThemeMain) {
+    final String langMain = ref.watch(lang);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Thumbs up
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              message.reactions?.containsKey('thumbsUp') == true &&
+                      message.reactions?['thumbsUp'] == true
+                  ? Icons.thumb_up
+                  : Icons.thumb_up_outlined,
+              size: 16,
+              color: message.reactions?.containsKey('thumbsUp') == true &&
+                      message.reactions?['thumbsUp'] == true
+                  ? Colors.blue
+                  : darkThemeMain
+                      ? Colors.white70
+                      : Colors.black54,
+            ),
+            onPressed: () {
+              if (message.messageId != null) {
+                ref
+                    .read(chatProvider.notifier)
+                    .reactToMessage(message.messageId!, 'thumbsUp');
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+          // Thumbs down
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              message.reactions?.containsKey('thumbsDown') == true &&
+                      message.reactions?['thumbsDown'] == true
+                  ? Icons.thumb_down
+                  : Icons.thumb_down_outlined,
+              size: 16,
+              color: message.reactions?.containsKey('thumbsDown') == true &&
+                      message.reactions?['thumbsDown'] == true
+                  ? Colors.red
+                  : darkThemeMain
+                      ? Colors.white70
+                      : Colors.black54,
+            ),
+            onPressed: () {
+              if (message.messageId != null) {
+                ref
+                    .read(chatProvider.notifier)
+                    .reactToMessage(message.messageId!, 'thumbsDown');
+              }
+            },
+          ),
+          const SizedBox(width: 12),
+          // Copy text
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              Icons.copy_outlined,
+              size: 16,
+              color: darkThemeMain ? Colors.white70 : Colors.black54,
+            ),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: message.text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    langMain == "tr"
+                        ? 'Mesaj panoya kopyalandı'
+                        : 'Message copied to clipboard',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  backgroundColor: Colors.black87,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
+          // Share
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              Icons.share_outlined,
+              size: 16,
+              color: darkThemeMain ? Colors.white70 : Colors.black54,
+            ),
+            onPressed: () {
+              Share.share(message.text);
+            },
+          ),
+          const SizedBox(width: 12),
+          // Bookmark
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              message.reactions?.containsKey('bookmark') == true &&
+                      message.reactions?['bookmark'] == true
+                  ? Icons.bookmark
+                  : Icons.bookmark_border_outlined,
+              size: 16,
+              color: message.reactions?.containsKey('bookmark') == true &&
+                      message.reactions?['bookmark'] == true
+                  ? Colors.amber
+                  : darkThemeMain
+                      ? Colors.white70
+                      : Colors.black54,
+            ),
+            onPressed: () {
+              if (message.messageId != null) {
+                ref
+                    .read(chatProvider.notifier)
+                    .reactToMessage(message.messageId!, 'bookmark');
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Chat suggestions widget
+  Widget _buildChatSuggestions(bool darkThemeMain) {
+    final suggestions = ref.watch(chatSuggestionsProvider);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: _showSuggestions ? 60 : 0,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: suggestions.map((suggestion) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                onTap: () {
+                  _controller.text = suggestion.text;
+                  setState(() {
+                    _showSuggestions = false;
+                  });
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color:
+                        darkThemeMain ? const Color(0xFF333333) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color:
+                          darkThemeMain ? Colors.grey[700]! : Colors.grey[300]!,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _getIconData(suggestion.icon),
+                        size: 16,
+                        color:
+                            darkThemeMain ? Colors.orange : Colors.deepOrange,
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 120,
+                        child: Text(
+                          suggestion.text,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color:
+                                darkThemeMain ? Colors.white : Colors.black87,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // Helper to convert string to IconData
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'sentiment_satisfied':
+        return Icons.sentiment_satisfied_alt_outlined;
+      case 'auto_stories':
+        return Icons.auto_stories_outlined;
+      case 'restaurant':
+        return Icons.restaurant_outlined;
+      case 'science':
+        return Icons.science_outlined;
+      default:
+        return Icons.chat_bubble_outline;
+    }
   }
 
   // Typing indicator animation
@@ -264,7 +500,7 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
     );
   }
 
-  // Enhanced chat input with modern styling
+  // Enhanced chat input with modern styling and image upload button
   Widget _buildChatInput(bool darkThemeMain, String langMain) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
@@ -280,6 +516,16 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
         ),
         child: Row(
           children: [
+            // Image upload button
+            IconButton(
+              icon: Icon(
+                Icons.photo_outlined,
+                color: darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
+              ),
+              onPressed: () {
+                ref.read(chatProvider.notifier).uploadAndSendImage(langMain);
+              },
+            ),
             Expanded(
               child: TextField(
                 controller: _controller,
@@ -287,6 +533,18 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
                   color: darkThemeMain ? Colors.white : Colors.black87,
                   fontSize: 16,
                 ),
+                onChanged: (text) {
+                  // Show suggestions when input is empty
+                  if (text.isEmpty && !_showSuggestions) {
+                    setState(() {
+                      _showSuggestions = true;
+                    });
+                  } else if (text.isNotEmpty && _showSuggestions) {
+                    setState(() {
+                      _showSuggestions = false;
+                    });
+                  }
+                },
                 decoration: InputDecoration(
                   hintText: langMain == "tr"
                       ? 'Bir mesaj yazın...'
@@ -352,7 +610,10 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
                           .read(chatProvider.notifier)
                           .sendMessage(_controller.text, langMain);
                       _controller.clear();
-                      // Add a small delay before scrolling to ensure the message is in the view
+                      setState(() {
+                        _showSuggestions = true;
+                      });
+                      // Add a small delay before scrolling
                       Future.delayed(const Duration(milliseconds: 100), () {
                         _scrollToBottom();
                       });
@@ -416,6 +677,13 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
           ),
         ),
         actions: [
+          // Save chat button
+          IconButton(
+            icon: const Icon(Icons.bookmark_border, color: Colors.white),
+            tooltip: langMain == "tr" ? "Sohbeti Kaydet" : "Save Chat",
+            onPressed: () => _showSaveChatDialog(langMain, darkThemeMain),
+          ),
+          // Clear chat button
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: IconButton(
@@ -461,6 +729,8 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
       body: SafeArea(
         child: Column(
           children: [
+            // Show suggestions at the top when there are messages
+            if (chatMessages.isNotEmpty) _buildChatSuggestions(darkThemeMain),
             Expanded(
               child: NotificationListener<ScrollNotification>(
                 onNotification: (ScrollNotification scrollInfo) {
@@ -492,6 +762,9 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
                                     : Colors.grey[700],
                               ),
                             ),
+                            const SizedBox(height: 24),
+                            // Show suggestions when empty
+                            _buildChatSuggestions(darkThemeMain),
                           ],
                         ),
                       )
@@ -510,6 +783,74 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
             _buildChatInput(darkThemeMain, langMain),
           ],
         ),
+      ),
+      // Scroll to bottom button
+      floatingActionButton: chatMessages.length > 5
+          ? FloatingActionButton(
+              mini: true,
+              backgroundColor:
+                  darkThemeMain ? Colors.orange : Colors.deepOrange,
+              onPressed: () => _scrollToBottom(),
+              child: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+            )
+          : null,
+    );
+  }
+
+  // Save chat dialog
+  void _showSaveChatDialog(String langMain, bool darkThemeMain) {
+    final TextEditingController titleController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: darkThemeMain ? const Color(0xFF333333) : Colors.white,
+        title: Text(
+          langMain == "tr" ? 'Sohbeti Kaydet' : 'Save Chat',
+          style: TextStyle(
+            color: darkThemeMain ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: TextField(
+          controller: titleController,
+          autofocus: true,
+          style: TextStyle(
+            color: darkThemeMain ? Colors.white : Colors.black87,
+          ),
+          decoration: InputDecoration(
+            hintText: langMain == "tr" ? 'Sohbet başlığı' : 'Chat title',
+            hintStyle: TextStyle(
+              color: darkThemeMain ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text(
+              langMain == "tr" ? 'İptal' : 'Cancel',
+              style: TextStyle(
+                color: darkThemeMain ? Colors.grey[400] : Colors.grey[700],
+              ),
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  darkThemeMain ? Colors.orangeAccent : Colors.deepOrange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(langMain == "tr" ? 'Kaydet' : 'Save'),
+            onPressed: () {
+              String title = titleController.text.trim();
+              if (title.isEmpty) {
+                title = langMain == "tr" ? 'Adsız Sohbet' : 'Untitled Chat';
+              }
+              ref.read(chatProvider.notifier).saveCurrentChat(title, langMain);
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
       ),
     );
   }

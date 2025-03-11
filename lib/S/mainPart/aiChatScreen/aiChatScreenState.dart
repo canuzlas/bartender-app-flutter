@@ -8,9 +8,128 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'dart:math' as Math;
+import 'package:uuid/uuid.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
 // Provider to store the thread ID for the assistant
 final assistantThreadProvider = StateProvider<String?>((ref) => null);
+
+// Provider for chat suggestions
+final chatSuggestionsProvider = Provider<List<ChatSuggestion>>((ref) {
+  return [
+    ChatSuggestion(
+      id: '1',
+      text: 'Tell me a joke',
+      icon: 'sentiment_satisfied',
+    ),
+    ChatSuggestion(
+      id: '2',
+      text: 'Write a poem about nature',
+      icon: 'auto_stories',
+    ),
+    ChatSuggestion(
+      id: '3',
+      text: 'Give me a recipe idea',
+      icon: 'restaurant',
+    ),
+    ChatSuggestion(
+      id: '4',
+      text: 'Explain quantum physics simply',
+      icon: 'science',
+    ),
+  ];
+});
+
+// Provider for saved chats
+final savedChatsProvider =
+    StateNotifierProvider<SavedChatsNotifier, List<SavedChat>>((ref) {
+  return SavedChatsNotifier();
+});
+
+class SavedChatsNotifier extends StateNotifier<List<SavedChat>> {
+  SavedChatsNotifier() : super([]) {
+    _loadSavedChats();
+  }
+
+  Future<void> _loadSavedChats() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('savedChats')
+            .orderBy('timestamp', descending: true)
+            .get();
+
+        final chats = snapshot.docs
+            .map((doc) => SavedChat(
+                  id: doc.id,
+                  title: doc['title'],
+                  timestamp: (doc['timestamp'] as Timestamp).toDate(),
+                  threadId: doc['threadId'],
+                  previewText: doc['previewText'] ?? '',
+                ))
+            .toList();
+
+        state = chats;
+      } catch (e) {
+        print('Error loading saved chats: $e');
+      }
+    }
+  }
+
+  Future<void> saveChat(
+      String threadId, String title, String previewText) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final timestamp = DateTime.now();
+        final docRef = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('savedChats')
+            .add({
+          'title': title,
+          'threadId': threadId,
+          'timestamp': Timestamp.fromDate(timestamp),
+          'previewText': previewText,
+        });
+
+        final newChat = SavedChat(
+          id: docRef.id,
+          title: title,
+          timestamp: timestamp,
+          threadId: threadId,
+          previewText: previewText,
+        );
+
+        state = [newChat, ...state];
+      } catch (e) {
+        print('Error saving chat: $e');
+      }
+    }
+  }
+
+  Future<void> deleteChat(String chatId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('savedChats')
+            .doc(chatId)
+            .delete();
+
+        state = state.where((chat) => chat.id != chatId).toList();
+      } catch (e) {
+        print('Error deleting saved chat: $e');
+      }
+    }
+  }
+}
 
 final chatProvider =
     StateNotifierProvider<ChatNotifier, List<ChatMessage>>((ref) {
@@ -20,6 +139,7 @@ final chatProvider =
 class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   final Ref _ref;
   String? _threadId;
+  final ImagePicker _picker = ImagePicker();
 
   ChatNotifier(this._ref) : super([]) {
     _loadMessagesFromFirestore();
@@ -103,14 +223,26 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   void sendMessage(String message, String langMain) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      final messageId = const Uuid().v4();
       final timestamp = Timestamp.now();
+
       await FirebaseFirestore.instance.collection('aichat').add({
         'uid': user.uid,
         'text': message,
         'isUser': true,
         'timestamp': timestamp,
+        'messageId': messageId,
       });
-      state = [...state, ChatMessage(message, true)];
+
+      state = [
+        ...state,
+        ChatMessage(
+          message,
+          true,
+          messageId: messageId,
+          timestamp: timestamp.toDate(),
+        )
+      ];
 
       // Add AI writing indicator
       final writingIndicator =
@@ -122,29 +254,121 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     }
   }
 
-  // Add method to send image messages
-  void sendImageMessage(String message, String langMain) async {
+  // Add method to handle image uploads
+  Future<void> uploadAndSendImage(String langMain) async {
+    try {
+      final XFile? pickedImage = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+
+      if (pickedImage == null) return;
+
+      final imageFile = File(pickedImage.path);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Show upload placeholder
+      final messageId = const Uuid().v4();
+      final timestamp = Timestamp.now();
+      final uploadingMessage =
+          langMain == "tr" ? "Görsel yükleniyor..." : "Uploading image...";
+
+      state = [
+        ...state,
+        ChatMessage(
+          uploadingMessage,
+          true,
+          messageId: messageId,
+          timestamp: timestamp.toDate(),
+          isUploading: true,
+        )
+      ];
+
+      // Upload to Firebase Storage
+      final storageRef = FirebaseStorage.instance.ref().child(
+          'chat_images/${user.uid}/${messageId}_${DateTime.now().millisecondsSinceEpoch}');
+
+      final uploadTask = storageRef.putFile(imageFile);
+      final snapshot = await uploadTask.whenComplete(() => null);
+      final imageUrl = await snapshot.ref.getDownloadURL();
+
+      // Replace placeholder with actual message
+      state = state.where((msg) => msg.messageId != messageId).toList();
+
+      // Ask user for image description
+      await _showImageDescriptionPrompt(
+          imageUrl, messageId, timestamp.toDate(), langMain);
+    } catch (e) {
+      print('Error uploading image: $e');
+      final errorMessage = langMain == "tr"
+          ? "Görsel yüklenemedi. Lütfen tekrar deneyin."
+          : "Failed to upload image. Please try again.";
+
+      state = [
+        ...state,
+        ChatMessage(
+          errorMessage,
+          false,
+          isError: true,
+        )
+      ];
+    }
+  }
+
+  // Handle image description prompt
+  Future<void> _showImageDescriptionPrompt(String imageUrl, String messageId,
+      DateTime timestamp, String langMain) async {
+    final emptyDescription =
+        langMain == "tr" ? "[Görsel paylaşıldı]" : "[Image shared]";
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final timestamp = Timestamp.now();
       await FirebaseFirestore.instance.collection('aichat').add({
         'uid': user.uid,
-        'text': message,
+        'text': emptyDescription,
         'isUser': true,
-        'timestamp': timestamp,
+        'timestamp': Timestamp.fromDate(timestamp),
+        'messageId': messageId,
+        'imageUrl': imageUrl,
       });
-      state = [...state, ChatMessage(message, true)];
+
+      state = [
+        ...state,
+        ChatMessage(
+          emptyDescription,
+          true,
+          messageId: messageId,
+          timestamp: timestamp,
+          imageUrl: imageUrl,
+        )
+      ];
 
       // Add AI writing indicator
       final writingIndicator =
           langMain == "tr" ? "Rakun yazıyor..." : "Raccon writing...";
       state = [...state, ChatMessage(writingIndicator, false)];
 
+      // Send message to Assistant API
+      sendImageMessage(emptyDescription, imageUrl, langMain);
+    }
+  }
+
+  // Add method to send image messages
+  void sendImageMessage(
+      String message, String imageUrl, String langMain) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // AI is already set to respond from the previous step, we just need to
+      // send the right prompt to the API
+
       // Fetch AI response with image context using Assistants API
-      _sendToAssistantAPI(
+      _sendToAssistantAPIWithImage(
           langMain == "tr"
-              ? "Kullanıcı bir görsel paylaştı. Görsel hakkında: $message"
-              : "User shared an image. About the image: $message",
+              ? "Kullanıcı bir görsel paylaştı. Görsel URL'i: $imageUrl. Görsel hakkında yorum yap."
+              : "User shared an image. Image URL: $imageUrl. Please comment on the image.",
           langMain);
     }
   }
@@ -178,6 +402,38 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       _updateUIWithResponse(response, langMain);
     } catch (e) {
       print('Error in _sendToAssistantAPI: $e');
+      _showErrorMessage(langMain);
+    }
+  }
+
+  // Send message with image to Assistant API
+  Future<void> _sendToAssistantAPIWithImage(
+      String message, String langMain) async {
+    try {
+      if (_threadId == null) {
+        await _initializeAssistantThread();
+        if (_threadId == null) {
+          throw Exception('Failed to initialize assistant thread');
+        }
+      }
+
+      final apiKey = dotenv.env['OPENAI_API_KEY'];
+      if (apiKey == null) {
+        throw Exception('API Key is not set');
+      }
+
+      // Add message to the thread
+      final assistantId = dotenv.env['OPENAI_ASSISTANT_ID'] ?? 'asst_ABC123';
+      await _addMessageToThread(message, apiKey);
+
+      // Run the assistant on the thread
+      final runId = await _runAssistantOnThread(apiKey, assistantId, langMain);
+
+      // Retrieve the response
+      final response = await _waitForAssistantResponse(apiKey, runId);
+      _updateUIWithResponse(response, langMain);
+    } catch (e) {
+      print('Error in _sendToAssistantAPIWithImage: $e');
       _showErrorMessage(langMain);
     }
   }
@@ -335,16 +591,29 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       state = state.sublist(0, state.length - 1);
     }
 
-    // Add AI response to state
-    state = [...state, ChatMessage(response, false)];
+    // Add AI response to state with a message ID
+    final messageId = const Uuid().v4();
+    final timestamp = DateTime.now();
+
+    state = [
+      ...state,
+      ChatMessage(
+        response,
+        false,
+        messageId: messageId,
+        timestamp: timestamp,
+      )
+    ];
 
     // Save to Firestore
-    _saveResponseToFirestore(response);
+    _saveResponseToFirestore(response, messageId, timestamp);
   }
 
   // Helper to save response to Firestore
   Future<void> _saveResponseToFirestore(
     String response,
+    String messageId,
+    DateTime timestamp,
   ) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -352,7 +621,8 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
         'uid': user.uid,
         'text': response,
         'isUser': false,
-        'timestamp': Timestamp.now(),
+        'timestamp': Timestamp.fromDate(timestamp),
+        'messageId': messageId,
       });
     }
   }
@@ -381,9 +651,21 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
           .orderBy('timestamp')
           .get();
       final messages = querySnapshot.docs.map((doc) {
+        // Get data from document as a Map
+        final data = doc.data();
+
         return ChatMessage(
-          doc['text'],
-          doc['isUser'],
+          data['text'],
+          data['isUser'],
+          messageId: data['messageId'],
+          timestamp: (data['timestamp'] as Timestamp).toDate(),
+          // Safely access the imageUrl field, which may not exist
+          imageUrl: data.containsKey('imageUrl') ? data['imageUrl'] : null,
+          isError: false,
+          // Safely access the reactions field, which may not exist
+          reactions: data.containsKey('reactions')
+              ? Map<String, bool>.from(data['reactions'])
+              : null,
         );
       }).toList();
       state = messages;
@@ -406,6 +688,98 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
 
       // When deleting chat, also create a new thread
       await _createAssistantThread();
+    }
+  }
+
+  // New function to toggle message reaction
+  Future<void> reactToMessage(String messageId, String reactionType) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null || messageId.isEmpty) return;
+
+      // Find message in state
+      final index = state.indexWhere((msg) => msg.messageId == messageId);
+      if (index == -1) return;
+
+      final message = state[index];
+
+      // Toggle reaction
+      Map<String, bool> updatedReactions = {...message.reactions ?? {}};
+      updatedReactions[reactionType] =
+          !(updatedReactions[reactionType] ?? false);
+
+      // Update in state
+      final updatedMessage = ChatMessage(
+        message.text,
+        message.isUser,
+        messageId: message.messageId,
+        timestamp: message.timestamp,
+        imageUrl: message.imageUrl,
+        isError: message.isError,
+        reactions: updatedReactions,
+      );
+
+      List<ChatMessage> newState = [...state];
+      newState[index] = updatedMessage;
+      state = newState;
+
+      // Update in Firestore
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('aichat')
+          .where('messageId', isEqualTo: messageId)
+          .where('uid', isEqualTo: user.uid)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final docRef = querySnapshot.docs.first.reference;
+        await docRef.update({
+          'reactions': updatedReactions,
+        });
+      }
+    } catch (e) {
+      print('Error reacting to message: $e');
+    }
+  }
+
+  // Save current chat with a title
+  Future<void> saveCurrentChat(String title, String langMain) async {
+    try {
+      if (_threadId == null) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Get preview from last AI message
+      String previewText = '';
+      for (int i = state.length - 1; i >= 0; i--) {
+        if (!state[i].isUser) {
+          previewText = state[i].text;
+          if (previewText.length > 100) {
+            previewText = '${previewText.substring(0, 97)}...';
+          }
+          break;
+        }
+      }
+
+      // Save to savedChats
+      await _ref.read(savedChatsProvider.notifier).saveChat(
+            _threadId!,
+            title,
+            previewText,
+          );
+
+      // Create a new thread for continuing chat
+      await _createAssistantThread();
+      state = [];
+
+      // Show success message
+      final successMessage = langMain == "tr"
+          ? "Sohbet başarıyla kaydedildi!"
+          : "Chat saved successfully!";
+
+      state = [ChatMessage(successMessage, false)];
+    } catch (e) {
+      print('Error saving chat: $e');
     }
   }
 }
