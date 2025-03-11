@@ -98,6 +98,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
 
     return Scaffold(
       backgroundColor: backgroundColor,
+      // Remove the floating action button and use settings menu instead
       body: SafeArea(
         child: RefreshIndicator(
           color: primaryColor,
@@ -135,31 +136,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
                 slivers: [
                   // Profile header with background image
                   SliverAppBar(
-                    expandedHeight: 150.0,
                     floating: false,
                     pinned: true,
                     backgroundColor: backgroundColor,
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: NetworkImage(
-                              userData['headerImage'] ??
-                                  'https://picsum.photos/800/300',
-                            ),
-                            fit: BoxFit.cover,
-                          ),
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              backgroundColor!.withOpacity(0.7)
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
                     actions: [
                       IconButton(
                         icon: const Icon(Icons.ios_share),
@@ -172,6 +151,14 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
                           if (item == 0) {
                             await _controller.showSettingsDialog(context, ref);
                           } else if (item == 1) {
+                            _controller.getScheduledPosts(context, ref);
+                          } else if (item == 2) {
+                            _controller.manageSocialLinks(context, ref);
+                          } else if (item == 3) {
+                            _controller.updateStoryPrivacy(context, ref);
+                          } else if (item == 4) {
+                            _controller.viewPostStatistics(context, ref);
+                          } else if (item == 5) {
                             await _controller.confirmLogout(context, langMain);
                           }
                         },
@@ -188,6 +175,52 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
                           ),
                           PopupMenuItem<int>(
                             value: 1,
+                            child: Row(
+                              children: [
+                                Icon(Icons.schedule, color: textColor),
+                                const SizedBox(width: 8),
+                                Text(langMain == 'tr'
+                                    ? 'Planlı Gönderiler'
+                                    : 'Scheduled Posts'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<int>(
+                            value: 2,
+                            child: Row(
+                              children: [
+                                Icon(Icons.link, color: textColor),
+                                const SizedBox(width: 8),
+                                Text(langMain == 'tr'
+                                    ? 'Sosyal Medya'
+                                    : 'Social Links'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<int>(
+                            value: 3,
+                            child: Row(
+                              children: [
+                                Icon(Icons.privacy_tip, color: textColor),
+                                const SizedBox(width: 8),
+                                Text(langMain == 'tr' ? 'Gizlilik' : 'Privacy'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<int>(
+                            value: 4,
+                            child: Row(
+                              children: [
+                                Icon(Icons.bar_chart, color: textColor),
+                                const SizedBox(width: 8),
+                                Text(langMain == 'tr'
+                                    ? 'İstatistikler'
+                                    : 'Statistics'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<int>(
+                            value: 5,
                             child: Row(
                               children: [
                                 Icon(Icons.logout, color: textColor),
@@ -323,9 +356,13 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
                             children: [
                               Row(
                                 children: [
-                                  Text(
-                                    selectedEmoji,
-                                    style: const TextStyle(fontSize: 24),
+                                  GestureDetector(
+                                    onTap: () => _controller.selectEmoji(
+                                        context, langMain, ref),
+                                    child: Text(
+                                      selectedEmoji,
+                                      style: const TextStyle(fontSize: 24),
+                                    ),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -407,6 +444,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
                                   ),
                                 ],
                               ),
+                              if (userData['socialLinks'] != null)
+                                _buildSocialLinks(userData['socialLinks'],
+                                    textColor, primaryColor),
                             ],
                           ),
                         ),
@@ -1170,71 +1210,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
   void _deletePost(String postId) {
     if (_isDisposed) return; // Safety check
 
-    // Store language value outside the async callback
-    final currentLang = ref.read(lang);
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title:
-              Text(ref.watch(lang) == 'tr' ? 'Gönderiyi Sil' : 'Delete Post'),
-          content: Text(ref.watch(lang) == 'tr'
-              ? 'Bu gönderiyi silmek istediğinizden emin misiniz?'
-              : 'Are you sure you want to delete this post?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(ref.watch(lang) == 'tr' ? 'İptal' : 'Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-
-                // Use a local BuildContext and capture needed values to avoid widget dependencies
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-                FirebaseFirestore.instance
-                    .collection('tweets')
-                    .doc(postId)
-                    .delete()
-                    .then((_) {
-                  // Only show notification if widget is still mounted
-                  if (mounted && !_isDisposed) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(currentLang == 'tr'
-                            ? 'Gönderi silindi'
-                            : 'Post deleted'),
-                      ),
-                    );
-
-                    // Update state only if mounted
-                    ref
-                        .read(refreshingProvider.notifier)
-                        .update((state) => !state);
-                  }
-                }).catchError((error) {
-                  print("Error deleting post: $error");
-
-                  // Only show error if widget is still mounted
-                  if (mounted && !_isDisposed) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $error'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                });
-              },
-              child: Text(ref.watch(lang) == 'tr' ? 'Sil' : 'Delete',
-                  style: const TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
+    _controller.deletePost(context, postId, ref.read(lang));
   }
 
   // Helper methods to reduce code repetition
@@ -1318,6 +1294,64 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
           return _buildPostsList(likedPosts, darkTheme, primaryColor, textColor,
               secondaryTextColor);
         },
+      ),
+    );
+  }
+
+  // New method to display social links
+  Widget _buildSocialLinks(
+      Map<String, dynamic> socialLinks, Color textColor, Color accentColor) {
+    final links = <Widget>[];
+
+    if (socialLinks['instagram']?.isNotEmpty == true) {
+      links.add(_buildSocialLink(Icons.camera_alt, 'Instagram',
+          socialLinks['instagram'], textColor, accentColor));
+    }
+
+    if (socialLinks['twitter']?.isNotEmpty == true) {
+      links.add(_buildSocialLink(Icons.alternate_email, 'Twitter',
+          socialLinks['twitter'], textColor, accentColor));
+    }
+
+    if (socialLinks['facebook']?.isNotEmpty == true) {
+      links.add(_buildSocialLink(Icons.facebook, 'Facebook',
+          socialLinks['facebook'], textColor, accentColor));
+    }
+
+    if (socialLinks['website']?.isNotEmpty == true) {
+      links.add(_buildSocialLink(Icons.language, 'Website',
+          socialLinks['website'], textColor, accentColor));
+    }
+
+    if (links.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: links,
+      ),
+    );
+  }
+
+  Widget _buildSocialLink(IconData icon, String platform, String handle,
+      Color textColor, Color accentColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: accentColor),
+          const SizedBox(width: 6),
+          Text(
+            '$platform: $handle',
+            style: TextStyle(
+              color: textColor.withOpacity(0.8),
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }
