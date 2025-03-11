@@ -1,5 +1,6 @@
 import 'package:bartender/S/mainPart/discoverScreen/searchDelegate.dart';
 import 'package:bartender/S/mainPart/homeScreen/homeScreenState.dart';
+import 'package:bartender/S/mainPart/homeScreen/storyBarWidget.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -185,14 +186,24 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain>
               onRefresh: () async {
                 ref.refresh(sortedTweetsProvider);
               },
-              child: ListView.builder(
-                padding: const EdgeInsets.only(top: 8, bottom: 20),
-                physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  final post = posts[index];
-                  return _buildPostCard(post);
-                },
+              child: Column(
+                children: [
+                  // Add story bar at the top of the feed
+                  const StoryBarWidget(),
+
+                  // Display posts in a scrollable list
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(top: 8, bottom: 20),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: posts.length,
+                      itemBuilder: (context, index) {
+                        final post = posts[index];
+                        return _buildPostCard(post);
+                      },
+                    ),
+                  ),
+                ],
               ),
             );
           },

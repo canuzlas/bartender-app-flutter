@@ -266,7 +266,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                   builder: (context) {
                     // Handle loading state
                     if (commentsState.isLoading) {
-                      return Center(
+                      return const Center(
                           child: CircularProgressIndicator(color: accentColor));
                     }
 

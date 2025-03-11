@@ -365,7 +365,7 @@ class ProfileScreenController {
                                 .child(
                                     '${currentUser.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-                            await storageRef.putFile(imageFile!);
+                            await storageRef.putFile(imageFile);
                             photoURL = await storageRef.getDownloadURL();
                           } catch (e) {
                             print("Error uploading image: $e");
@@ -1204,7 +1204,7 @@ class ProfileScreenController {
             onPressed: () => Navigator.pop(context),
             child: Text(
               langMain == 'tr' ? 'İptal' : 'Cancel',
-              style: TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.grey),
             ),
           ),
           ElevatedButton(
@@ -1357,22 +1357,20 @@ class ProfileScreenController {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...storyOptions
-                      .map((option) => RadioListTile<String>(
-                            title: Text(
-                              option['name'] as String,
-                              style: TextStyle(color: textColor),
-                            ),
-                            value: option['value'] as String,
-                            groupValue: storyVisibility,
-                            activeColor: accentColor,
-                            onChanged: (value) {
-                              setState(() {
-                                storyVisibility = value!;
-                              });
-                            },
-                          ))
-                      .toList(),
+                  ...storyOptions.map((option) => RadioListTile<String>(
+                        title: Text(
+                          option['name'] as String,
+                          style: TextStyle(color: textColor),
+                        ),
+                        value: option['value'] as String,
+                        groupValue: storyVisibility,
+                        activeColor: accentColor,
+                        onChanged: (value) {
+                          setState(() {
+                            storyVisibility = value!;
+                          });
+                        },
+                      )),
 
                   const SizedBox(height: 15),
                   const Divider(),
@@ -1419,7 +1417,7 @@ class ProfileScreenController {
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   langMain == 'tr' ? 'İptal' : 'Cancel',
-                  style: TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ),
               ElevatedButton(
@@ -1563,7 +1561,7 @@ class ProfileScreenController {
             .doc(currentUser.uid)
             .get();
 
-        final userData = userDoc.data() as Map<String, dynamic>?;
+        final userData = userDoc.data();
         if (userData != null) {
           final followersCount =
               (userData['followers'] as List<dynamic>?)?.length ?? 0;
@@ -1713,7 +1711,7 @@ class ProfileScreenController {
                                     ? '(Boş gönderi)'
                                     : '(Empty post)')
                                 : messageText.length > 30
-                                    ? messageText.substring(0, 30) + '...'
+                                    ? '${messageText.substring(0, 30)}...'
                                     : messageText;
 
                             return ListTile(
@@ -1725,7 +1723,7 @@ class ProfileScreenController {
                               ),
                               subtitle: Row(
                                 children: [
-                                  Icon(Icons.favorite,
+                                  const Icon(Icons.favorite,
                                       color: Colors.red, size: 16),
                                   Text(' ${post['likes']} · ',
                                       style: TextStyle(

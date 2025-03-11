@@ -986,7 +986,6 @@ class _DotTypingIndicator extends StatefulWidget {
   final Color color;
 
   const _DotTypingIndicator({
-    super.key,
     required this.position,
     required this.color,
   });

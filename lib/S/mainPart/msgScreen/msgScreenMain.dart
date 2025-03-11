@@ -112,9 +112,16 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
   }
 
   Future<Map<String, dynamic>> getUserData(String userId) async {
-    final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(userId).get();
-    return userDoc.data() ?? {};
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      return userDoc.data() ?? {};
+    } catch (e) {
+      print("Error fetching user data: $e");
+      return {};
+    }
   }
 
   Future<void> _refreshMessages() async {
@@ -284,18 +291,38 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
             return FutureBuilder(
               future: Future.wait(messages.map((message) async {
                 final messageData = message;
-                final participantId = currentUserId == messageData['senderId']
-                    ? messageData['recipientId']
-                    : messageData['senderId'];
+                // Add null check for senderId and recipientId
+                final String senderId =
+                    messageData['senderId']?.toString() ?? '';
+                final String recipientId =
+                    messageData['recipientId']?.toString() ?? '';
+
+                // Ensure we have a valid participantId
+                final String participantId;
+                if (currentUserId == senderId && recipientId.isNotEmpty) {
+                  participantId = recipientId;
+                } else if (senderId.isNotEmpty) {
+                  participantId = senderId;
+                } else {
+                  // Skip this message if we can't determine a valid participant
+                  print("Skipping message with invalid IDs: $messageData");
+                  return;
+                }
+
                 final userData = await getUserData(participantId);
-                final profilePhoto =
-                    userData['photoURL'] ?? 'assets/images/placeholder.png';
-                final sendername = userData['displayname'] ?? 'Unknown';
-                final lastMessage = messageData['lastMessage'] ?? 'No message';
+                final String profilePhoto = userData['photoURL']?.toString() ??
+                    'assets/images/placeholder.png';
+                final String sendername =
+                    userData['displayname']?.toString() ?? 'Unknown';
+                final String lastMessage =
+                    messageData['lastMessage']?.toString() ?? 'No message';
                 final timestamp = messageData['timestamp'] != null
                     ? (messageData['timestamp'] as Timestamp).toDate()
                     : DateTime.now();
-                final unread = messageData['unread'] ?? false;
+                final bool unread = messageData['unread'] == true;
+                final String messageId = messageData['messageId']?.toString() ??
+                    DateTime.now().toIso8601String();
+
                 if (!usersMap.containsKey(participantId) ||
                     timestamp.compareTo(usersMap[participantId]!['timestamp']) >
                         0) {
@@ -303,10 +330,10 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                     'profilePhoto': profilePhoto,
                     'lastMessage': lastMessage,
                     'timestamp': timestamp,
-                    'senderId': messageData['senderId'] ?? 'Unknown',
+                    'senderId': senderId,
                     'sendername': sendername,
                     'unread': unread,
-                    'messageId': messageData['messageId'] ?? 'Unknown'
+                    'messageId': messageId
                   };
                 }
               }).toList()),
@@ -375,7 +402,7 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                         user.value['senderId'] != currentUserId;
 
                     return Dismissible(
-                      key: Key(user.value['messageId']),
+                      key: Key(user.value['messageId']?.toString() ?? user.key),
                       direction: DismissDirection.endToStart,
                       confirmDismiss: (direction) async {
                         return await showDialog(
@@ -474,9 +501,11 @@ class _MsgScreenMainState extends ConsumerState<MsgScreenMain> {
                                                         'profilePhoto'] !=
                                                     null &&
                                                 user.value['profilePhoto']
+                                                    .toString()
                                                     .startsWith('http')
-                                            ? NetworkImage(
-                                                user.value['profilePhoto'])
+                                            ? NetworkImage(user
+                                                .value['profilePhoto']
+                                                .toString())
                                             : const AssetImage(
                                                     'assets/openingPageDT.png')
                                                 as ImageProvider,
