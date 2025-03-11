@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenModel.dart';
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenState.dart';
 import 'package:bartender/mainSettings.dart';
@@ -17,12 +18,24 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
   late ScrollController _scrollController;
   late TextEditingController _controller;
   bool _showSuggestions = true;
+  bool _isLoading = true; // Add loading state
+  bool _splasScreenBuilded = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _controller = TextEditingController();
+
+    // Start loading timer to show splash for 2 seconds
+    Timer(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _splasScreenBuilded = true;
+        });
+      }
+    });
 
     // Ensure we initialize the scroll controller correctly
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -634,6 +647,94 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
         ),
       );
 
+  // Build splash screen widget
+  Widget _buildSplashScreen(bool darkThemeMain, String langMain) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: darkThemeMain
+              ? [const Color(0xFF1A237E), const Color(0xFF121212)]
+              : [const Color(0xFF7B1FA2), const Color(0xFFF8F9FA)],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // App logo
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color:
+                    darkThemeMain ? Colors.deepPurple.shade900 : Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    spreadRadius: 1,
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.pets_rounded, // Raccoon-related icon
+                  size: 70,
+                  color:
+                      darkThemeMain ? Colors.orangeAccent : Colors.deepPurple,
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            // App name
+            Text(
+              langMain == "tr" ? "Rakun" : "Raccoon",
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 1.2,
+                shadows: [
+                  Shadow(
+                    blurRadius: 10.0,
+                    color: Colors.black.withOpacity(0.3),
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // App description
+            Text(
+              langMain == "tr" ? "Yapay Zeka Asistanınız" : "Your AI Assistant",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w400,
+                color: Colors.white.withOpacity(0.9),
+              ),
+            ),
+            const SizedBox(height: 40),
+            // Loading indicator
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  darkThemeMain ? Colors.orangeAccent : Colors.white,
+                ),
+                strokeWidth: 3,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatMessages = ref.watch(chatProvider);
@@ -653,147 +754,170 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
     return Scaffold(
       backgroundColor:
           darkThemeMain ? const Color(0xFF121212) : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          langMain == "tr" ? "Rakun Yapay Zeka" : 'Raccon Chat Assistant',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF1A237E), // Deep blue
-                Color(0xFF7B1FA2), // Deep purple
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        actions: [
-          // Save chat button
-          IconButton(
-            icon: const Icon(Icons.bookmark_border, color: Colors.white),
-            tooltip: langMain == "tr" ? "Sohbeti Kaydet" : "Save Chat",
-            onPressed: () => _showSaveChatDialog(langMain, darkThemeMain),
-          ),
-          // Clear chat button
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: IconButton(
-              icon:
-                  const Icon(Icons.delete_outline_rounded, color: Colors.white),
-              tooltip: langMain == "tr" ? "Sohbeti Temizle" : "Clear Chat",
-              onPressed: () => showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(
-                    langMain == "tr" ? "Sohbeti Temizle" : "Clear Chat",
-                  ),
-                  content: Text(
-                    langMain == "tr"
-                        ? "Tüm mesajlar silinecek. Emin misiniz?"
-                        : "All messages will be deleted. Are you sure?",
-                  ),
-                  actions: [
-                    TextButton(
-                      child: Text(
-                        langMain == "tr" ? "İptal" : "Cancel",
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
+      // Show either the splash screen or the main content
+      body: _isLoading && !_splasScreenBuilded
+          ? _buildSplashScreen(darkThemeMain, langMain)
+          : Column(
+              children: [
+                // AppBar-like header
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF1A237E), // Deep blue
+                        Color(0xFF7B1FA2), // Deep purple
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    TextButton(
-                      child: Text(
-                        langMain == "tr" ? "Temizle" : "Clear",
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      onPressed: () {
-                        ref.read(chatProvider.notifier).deleteChat();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Show suggestions at the top when there are messages
-            if (chatMessages.isNotEmpty) _buildChatSuggestions(darkThemeMain),
-            Expanded(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (ScrollNotification scrollInfo) {
-                  // Keep track of scroll position to detect user scroll events
-                  return false;
-                },
-                child: chatMessages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 80,
-                              color: darkThemeMain
-                                  ? Colors.grey[700]
-                                  : Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
                               langMain == "tr"
-                                  ? "Yapay zeka ile sohbete başlayın!"
-                                  : "Start chatting with AI!",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                                color: darkThemeMain
-                                    ? Colors.grey[400]
-                                    : Colors.grey[700],
+                                  ? "Rakun Yapay Zeka"
+                                  : 'Raccon Chat Assistant',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 24),
-                            // Show suggestions when empty
-                            _buildChatSuggestions(darkThemeMain),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.only(
-                            top: 16, left: 8, right: 8, bottom: 20),
-                        itemCount: chatMessages.length,
-                        itemBuilder: (context, index) {
-                          final message = chatMessages[index];
-                          return _buildMessageBubble(message, darkThemeMain);
-                        },
+                          ),
+                          // Save chat button
+                          IconButton(
+                            icon: const Icon(Icons.bookmark_border,
+                                color: Colors.white),
+                            tooltip: langMain == "tr"
+                                ? "Sohbeti Kaydet"
+                                : "Save Chat",
+                            onPressed: () =>
+                                _showSaveChatDialog(langMain, darkThemeMain),
+                          ),
+                          // Clear chat button
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                color: Colors.white),
+                            tooltip: langMain == "tr"
+                                ? "Sohbeti Temizle"
+                                : "Clear Chat",
+                            onPressed: () => showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text(
+                                  langMain == "tr"
+                                      ? "Sohbeti Temizle"
+                                      : "Clear Chat",
+                                ),
+                                content: Text(
+                                  langMain == "tr"
+                                      ? "Tüm mesajlar silinecek. Emin misiniz?"
+                                      : "All messages will be deleted. Are you sure?",
+                                ),
+                                actions: [
+                                  TextButton(
+                                    child: Text(
+                                      langMain == "tr" ? "İptal" : "Cancel",
+                                      style:
+                                          const TextStyle(color: Colors.grey),
+                                    ),
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(),
+                                  ),
+                                  TextButton(
+                                    child: Text(
+                                      langMain == "tr" ? "Temizle" : "Clear",
+                                      style: const TextStyle(color: Colors.red),
+                                    ),
+                                    onPressed: () {
+                                      ref
+                                          .read(chatProvider.notifier)
+                                          .deleteChat();
+                                      Navigator.of(context).pop();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-              ),
+                    ),
+                  ),
+                ),
+                // Main chat content
+                Expanded(
+                  child: SafeArea(
+                    top: false,
+                    child: Column(
+                      children: [
+                        // Show suggestions at the top when there are messages
+                        if (chatMessages.isNotEmpty)
+                          _buildChatSuggestions(darkThemeMain),
+                        Expanded(
+                          child: NotificationListener<ScrollNotification>(
+                            onNotification: (ScrollNotification scrollInfo) {
+                              // Keep track of scroll position to detect user scroll events
+                              return false;
+                            },
+                            child: chatMessages.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.chat_bubble_outline,
+                                          size: 80,
+                                          color: darkThemeMain
+                                              ? Colors.grey[700]
+                                              : Colors.grey[400],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          langMain == "tr"
+                                              ? "Yapay zeka ile sohbete başlayın!"
+                                              : "Start chatting with AI!",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w500,
+                                            color: darkThemeMain
+                                                ? Colors.grey[400]
+                                                : Colors.grey[700],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        // Show suggestions when empty
+                                        _buildChatSuggestions(darkThemeMain),
+                                      ],
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.only(
+                                        top: 16, left: 8, right: 8, bottom: 20),
+                                    itemCount: chatMessages.length,
+                                    itemBuilder: (context, index) {
+                                      final message = chatMessages[index];
+                                      return _buildMessageBubble(
+                                          message, darkThemeMain);
+                                    },
+                                  ),
+                          ),
+                        ),
+                        _buildChatInput(darkThemeMain, langMain),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            _buildChatInput(darkThemeMain, langMain),
-          ],
-        ),
-      ),
-      // Scroll to bottom button
-      floatingActionButton: chatMessages.length > 5
-          ? FloatingActionButton(
-              mini: true,
-              backgroundColor:
-                  darkThemeMain ? Colors.orange : Colors.deepOrange,
-              onPressed: () => _scrollToBottom(),
-              child: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-            )
-          : null,
     );
   }
 
