@@ -204,8 +204,11 @@ class ProfileScreenController {
       await showDialog(
         context: context,
         builder: (context) {
-          return StatefulBuilder(
-            builder: (context, setState) {
+          return Consumer(
+            builder: (context, widgetRef, child) {
+              // Use widgetRef to watch the imageFile provider
+              final imageFile = widgetRef.watch(profileImageFileProvider);
+
               return AlertDialog(
                 backgroundColor: backgroundColor,
                 shape: RoundedRectangleBorder(
@@ -245,9 +248,10 @@ class ProfileScreenController {
                             );
 
                             if (image != null) {
-                              setState(() {
-                                imageFile = File(image.path);
-                              });
+                              // Update provider instead of using setState
+                              widgetRef
+                                  .read(profileImageFileProvider.notifier)
+                                  .state = File(image.path);
                             }
                           } catch (e) {
                             print("Error picking image: $e");
@@ -269,7 +273,7 @@ class ProfileScreenController {
                             CircleAvatar(
                               radius: 50,
                               backgroundImage: imageFile != null
-                                  ? FileImage(imageFile!) as ImageProvider
+                                  ? FileImage(imageFile) as ImageProvider
                                   : NetworkImage(
                                       imageUrl ?? 'https://picsum.photos/200'),
                             ),
@@ -819,5 +823,9 @@ class ProfileScreenController {
   }
 }
 
+// Fix the duplicate provider declarations at the end of the file
 final selectedEmojiProvider = StateProvider<String>((ref) => "🍸");
 final refreshingProvider = StateProvider<bool>((ref) => false);
+final showArchivedProvider = StateProvider<bool>((ref) => false);
+final tabIndexProvider = StateProvider<int>((ref) => 0);
+final profileImageFileProvider = StateProvider<File?>((ref) => null);
