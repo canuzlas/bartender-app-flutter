@@ -14,6 +14,10 @@ class StoryViewerWidget extends ConsumerStatefulWidget {
   // Add new callback functions
   final Function(String storyId, bool isLiked)? onLike;
   final Function(String storyId, String message)? onSendMessage;
+  // Add new property to identify if it's the user's own story
+  final bool isOwnStory;
+  // Add index property to identify which highlight to delete
+  final int? highlightIndex;
 
   const StoryViewerWidget({
     Key? key,
@@ -23,6 +27,8 @@ class StoryViewerWidget extends ConsumerStatefulWidget {
     required this.onClose,
     this.onLike,
     this.onSendMessage,
+    this.isOwnStory = false, // Default to false for backward compatibility
+    this.highlightIndex,
   }) : super(key: key);
 
   @override
@@ -40,6 +46,16 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
   final TextEditingController _messageController = TextEditingController();
   bool _showReplyBox = false;
 
+  // Add a flag to track if the widget is in the process of being disposed
+  bool _isDisposing = false;
+
+  // Add a global key for Scaffold to access ScaffoldMessenger safely
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
+  // Cache language to avoid context access
+  String? _cachedLanguage;
+
   @override
   void initState() {
     super.initState();
@@ -47,8 +63,13 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
     _animController =
         AnimationController(vsync: this, duration: _storyDuration);
 
-    // Mark initial story as viewed
-    _markAsViewed(widget.stories[_currentIndex]['id'] as String);
+    // Mark initial story as viewed - with null safety check
+    if (_currentIndex < widget.stories.length) {
+      final storyId = widget.stories[_currentIndex]['id'];
+      if (storyId != null) {
+        _markAsViewed(storyId.toString());
+      }
+    }
 
     _animController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -65,13 +86,80 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Cache the language when dependencies change
+    _cachedLanguage = ref.read(lang);
+  }
+
+  @override
   void dispose() {
+    // Set the flag before starting disposal process
+    _isDisposing = true;
+
+    // Cancel any pending operations
+    if (_timer != null) {
+      _timer!.cancel();
+      _timer = null;
+    }
+
     _animController.stop();
     _pageController.dispose();
     _animController.dispose();
-    _timer?.cancel();
     _messageController.dispose();
     super.dispose();
+  }
+
+  // Safe method to check if we can use context
+  bool get _canUseContext => mounted && !_isDisposing;
+
+  // Safe language getter that doesn't depend on context
+  String get _language => _cachedLanguage ?? 'en';
+
+  // Safe method to show dialogs
+  Future<T?> _safeShowDialog<T>({
+    required BuildContext context,
+    required Widget Function(BuildContext) builder,
+    bool barrierDismissible = true,
+  }) async {
+    if (!_canUseContext) return null;
+    try {
+      return await showDialog<T>(
+        context: context,
+        barrierDismissible: barrierDismissible,
+        builder: builder,
+      );
+    } catch (e) {
+      print("Error showing dialog: $e");
+      return null;
+    }
+  }
+
+  // Safe method to show a snackbar without context
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!_canUseContext) return;
+
+    try {
+      // Use the global key if available
+      if (_scaffoldMessengerKey.currentState != null) {
+        _scaffoldMessengerKey.currentState!.showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: isError ? Colors.red : Colors.green,
+          ),
+        );
+      } else if (mounted) {
+        // Fallback to context if widget is still mounted
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: isError ? Colors.red : Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error showing snackbar: $e");
+    }
   }
 
   void _loadStory() {
@@ -91,8 +179,11 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
         );
         _loadStory();
       } else {
-        // Last story finished
-        widget.onClose();
+        // Last story finished - ensure proper navigation
+        if (widget.onClose != null) {
+          widget.onClose();
+        }
+        Navigator.of(context).pop();
       }
     });
   }
@@ -141,267 +232,357 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
 
   @override
   Widget build(BuildContext context) {
+    // Cache language at build time
+    _cachedLanguage = ref.watch(lang);
+
     if (_currentIndex >= widget.stories.length) {
       // Handle edge case where current index might be out of bounds
       _currentIndex = widget.stories.length - 1;
     }
 
     final story = widget.stories[_currentIndex];
-    final storyId = story['id'] as String;
+    // Add null safety check for storyId
+    final storyId = story['id']?.toString() ?? '';
 
-    return Material(
-      type: MaterialType.transparency,
-      child: SafeArea(
-        child: Scaffold(
-          backgroundColor: Colors.black,
-          body: GestureDetector(
-            onTapDown: (details) {
-              if (!_showReplyBox) {
-                // Only handle taps if reply box is not shown
-                _onTapDown(details);
-              }
-            },
-            onLongPress: _pauseStory,
-            onLongPressEnd: (_) => _resumeStory(),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Story content
-                PageView.builder(
-                  controller: _pageController,
-                  physics:
-                      _showReplyBox ? NeverScrollableScrollPhysics() : null,
-                  itemCount: widget.stories.length,
-                  onPageChanged: (index) {
-                    if (index != _currentIndex) {
-                      setState(() {
-                        _currentIndex = index;
-                        _loadStory();
-                        _markAsViewed(widget.stories[index]['id'] as String);
-                      });
-                    }
-                  },
-                  itemBuilder: (context, index) {
-                    final storyItem = widget.stories[index];
-                    return _buildStoryContent(storyItem);
-                  },
-                ),
+    return ScaffoldMessenger(
+      key: _scaffoldMessengerKey, // Assign global key here
+      child: Material(
+        type: MaterialType.transparency,
+        child: SafeArea(
+          // Apply SafeArea on all sides
+          child: Scaffold(
+            backgroundColor: Colors.black,
+            extendBodyBehindAppBar: true,
+            // Add persistent bottom action bar
+            bottomNavigationBar: _showReplyBox ? null : _buildBottomActionBar(),
+            body: GestureDetector(
+              onTapDown: (details) {
+                if (!_showReplyBox) {
+                  // Only handle taps if reply box is not shown
+                  _onTapDown(details);
+                }
+              },
+              onLongPress: _pauseStory,
+              onLongPressEnd: (_) => _resumeStory(),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Story content
+                  PageView.builder(
+                    controller: _pageController,
+                    physics:
+                        _showReplyBox ? NeverScrollableScrollPhysics() : null,
+                    itemCount: widget.stories.length,
+                    onPageChanged: (index) {
+                      if (index != _currentIndex) {
+                        setState(() {
+                          _currentIndex = index;
+                          _loadStory();
+                          // Add null check before casting to String
+                          final storyId = widget.stories[index]['id'];
+                          if (storyId != null) {
+                            _markAsViewed(storyId.toString());
+                          }
+                        });
+                      }
+                    },
+                    itemBuilder: (context, index) {
+                      final storyItem = widget.stories[index];
+                      return _buildStoryContent(storyItem);
+                    },
+                  ),
 
-                // UI Overlay (Progress, User info, Actions)
-                Column(
-                  children: [
-                    // Progress indicator
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0, vertical: 8.0),
-                      child: Row(
-                        children: widget.stories
-                            .asMap()
-                            .map((i, e) {
-                              return MapEntry(
-                                i,
-                                Expanded(
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 2.0),
-                                    height: 2.0,
-                                    child: LinearProgressIndicator(
-                                      value: i == _currentIndex
-                                          ? _animController.value
-                                          : i < _currentIndex
-                                              ? 1.0
-                                              : 0.0,
-                                      backgroundColor:
-                                          Colors.white.withOpacity(0.4),
-                                      valueColor:
-                                          const AlwaysStoppedAnimation<Color>(
-                                              Colors.white),
+                  // UI Overlay (Progress, User info, Actions)
+                  Column(
+                    children: [
+                      // Add extra padding for the status bar
+                      SizedBox(
+                          height: widget.isOwnStory
+                              ? MediaQuery.of(context).padding.top
+                              : 0),
+
+                      // Progress indicator
+                      Padding(
+                        // Add extra padding for own stories to avoid notch area
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.0, vertical: 8.0),
+                        child: Row(
+                          children: widget.stories
+                              .asMap()
+                              .map((i, e) {
+                                return MapEntry(
+                                  i,
+                                  Expanded(
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 2.0),
+                                      height: 2.0,
+                                      child: LinearProgressIndicator(
+                                        value: i == _currentIndex
+                                            ? _animController.value
+                                            : i < _currentIndex
+                                                ? 1.0
+                                                : 0.0,
+                                        backgroundColor:
+                                            Colors.white.withOpacity(0.4),
+                                        valueColor:
+                                            const AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            })
-                            .values
-                            .toList(),
+                                );
+                              })
+                              .values
+                              .toList(),
+                        ),
                       ),
-                    ),
 
-                    // User info
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 8.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage: NetworkImage(widget.userImage),
-                            radius: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              widget.userName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            _formatTimestamp(story['timestamp']),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            onPressed: widget.onClose,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Spacer to push action buttons to the bottom
-                    const Spacer(),
-
-                    // Bottom action bar
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildActionButton(
-                            icon: _isLiked()
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            color: _isLiked() ? Colors.red : Colors.white,
-                            label: _isLiked()
-                                ? (ref.watch(lang) == 'tr'
-                                    ? 'Beğenildi'
-                                    : 'Liked')
-                                : (ref.watch(lang) == 'tr' ? 'Beğen' : 'Like'),
-                            onTap: () {
-                              if (widget.onLike != null) {
-                                widget.onLike!(storyId, !_isLiked());
-
-                                // Update local state immediately for better UX
-                                setState(() {
-                                  final currentStory =
-                                      widget.stories[_currentIndex];
-                                  final List<dynamic> likedBy =
-                                      List<dynamic>.from(
-                                          currentStory['likedBy'] ?? []);
-                                  final String currentUserId =
-                                      FirebaseAuth.instance.currentUser?.uid ??
-                                          '';
-
-                                  if (!_isLiked()) {
-                                    if (!likedBy.contains(currentUserId)) {
-                                      likedBy.add(currentUserId);
-                                    }
-                                  } else {
-                                    likedBy.remove(currentUserId);
-                                  }
-
-                                  // Update the local copy
-                                  widget.stories[_currentIndex]['likedBy'] =
-                                      likedBy;
-                                });
-                              }
-                            },
-                          ),
-                          _buildActionButton(
-                            icon: Icons.reply,
-                            color: Colors.white,
-                            label:
-                                ref.watch(lang) == 'tr' ? 'Yanıtla' : 'Reply',
-                            onTap: () {
-                              _pauseStory();
-                              setState(() {
-                                _showReplyBox = true;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Reply Box
-                    if (_showReplyBox)
-                      Container(
+                      // User info
+                      Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16.0, vertical: 8.0),
-                        color: Colors.black.withOpacity(0.8),
-                        child: Column(
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _messageController,
-                                    style: const TextStyle(color: Colors.white),
-                                    decoration: InputDecoration(
-                                      hintText: ref.watch(lang) == 'tr'
-                                          ? 'Mesajınızı yazın...'
-                                          : 'Type your message...',
-                                      hintStyle: const TextStyle(
-                                          color: Colors.white70),
-                                      border: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(25.0),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.white24,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                        horizontal: 16.0,
-                                        vertical: 12.0,
-                                      ),
-                                    ),
-                                    autofocus: true,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.send,
-                                      color: Colors.white),
-                                  onPressed: () {
-                                    _sendMessage(storyId);
-                                  },
-                                ),
-                              ],
+                            CircleAvatar(
+                              backgroundImage: NetworkImage(widget.userImage),
+                              radius: 20,
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _showReplyBox = false;
-                                      _messageController.clear();
-                                    });
-                                    _resumeStory();
-                                  },
-                                  child: Text(
-                                    ref.watch(lang) == 'tr'
-                                        ? 'İptal'
-                                        : 'Cancel',
-                                    style:
-                                        const TextStyle(color: Colors.white70),
-                                  ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                widget.userName,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
                                 ),
-                              ],
+                              ),
+                            ),
+                            Text(
+                              _formatTimestamp(story['timestamp']),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Fix close button
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.close, color: Colors.white),
+                              onPressed: () {
+                                // First notify parent via callback if needed
+                                if (widget.onClose != null) {
+                                  widget.onClose();
+                                }
+                                // Then ensure we pop this screen
+                                Navigator.of(context).pop();
+                              },
+                              padding: EdgeInsets.all(8),
                             ),
                           ],
                         ),
                       ),
-                  ],
-                ),
-              ],
+
+                      // Spacer to push action buttons to the bottom
+                      const Spacer(),
+
+                      // Delete button - only shown for own stories
+                      if (widget.isOwnStory && widget.highlightIndex != null)
+                        Padding(
+                          padding: EdgeInsets.only(
+                              bottom:
+                                  16.0 + MediaQuery.of(context).padding.bottom,
+                              left: 16.0,
+                              right: 16.0),
+                          child: ElevatedButton.icon(
+                            onPressed: () => _confirmDeleteHighlight(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.withOpacity(0.8),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12.0, horizontal: 20.0),
+                            ),
+                            icon: const Icon(Icons.delete_outline),
+                            label: Text(
+                              ref.watch(lang) == 'tr'
+                                  ? 'Bu Hikayeyi Sil'
+                                  : 'Delete This Story',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+
+                      // Reply Box (keeping this section for backward compatibility)
+                      if (_showReplyBox)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 8.0),
+                          color: Colors.black.withOpacity(0.8),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _messageController,
+                                      style:
+                                          const TextStyle(color: Colors.white),
+                                      decoration: InputDecoration(
+                                        hintText: ref.watch(lang) == 'tr'
+                                            ? 'Mesajınızı yazın...'
+                                            : 'Type your message...',
+                                        hintStyle: const TextStyle(
+                                            color: Colors.white70),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(25.0),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white24,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          horizontal: 16.0,
+                                          vertical: 12.0,
+                                        ),
+                                      ),
+                                      autofocus: true,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.send,
+                                        color: Colors.white),
+                                    onPressed: () {
+                                      _sendMessage(storyId);
+                                    },
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _showReplyBox = false;
+                                        _messageController.clear();
+                                      });
+                                      _resumeStory();
+                                    },
+                                    child: Text(
+                                      ref.watch(lang) == 'tr'
+                                          ? 'İptal'
+                                          : 'Cancel',
+                                      style: const TextStyle(
+                                          color: Colors.white70),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Add new method to build the bottom action bar
+  Widget _buildBottomActionBar() {
+    final isCurrentUserStory = widget.stories.isNotEmpty &&
+        widget.stories[0]['userId'] == FirebaseAuth.instance.currentUser?.uid;
+
+    final darkThemeMain = ref.watch(darkTheme);
+    final primaryColor =
+        darkThemeMain ? Colors.orangeAccent : Colors.deepOrange;
+
+    return Container(
+      color: Colors.black.withOpacity(0.7),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom,
+        top: 8,
+        left: 16,
+        right: 16,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Like Button - only if not current user's story
+          if (!isCurrentUserStory)
+            _buildIconButton(
+              icon: _isLiked() ? Icons.favorite : Icons.favorite_border,
+              label: ref.watch(lang) == 'tr' ? 'Beğen' : 'Like',
+              color: _isLiked() ? Colors.red : Colors.white,
+              onTap: () {
+                final storyId = widget.stories[_currentIndex]['id'].toString();
+                final bool isLiked = _isLiked();
+
+                if (widget.onLike != null) {
+                  widget.onLike!(storyId, !isLiked);
+                  setState(() {}); // Refresh to update like status
+                }
+              },
+            ),
+
+          // Reply Button - only if not current user's story
+          if (!isCurrentUserStory)
+            _buildIconButton(
+              icon: Icons.reply,
+              label: ref.watch(lang) == 'tr' ? 'Yanıtla' : 'Reply',
+              color: Colors.white,
+              onTap: () {
+                setState(() {
+                  _showReplyBox = true;
+                  _pauseStory();
+                });
+              },
+            ),
+
+          // My Stories Button - always show
+          _buildIconButton(
+            icon: Icons.auto_stories,
+            label: ref.watch(lang) == 'tr' ? 'Hikayelerim' : 'My Stories',
+            color: primaryColor,
+            onTap: () => _viewMyStories(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to build icon buttons with consistent style
+  Widget _buildIconButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(30),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ],
         ),
       ),
     );
@@ -496,153 +677,398 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
     }
   }
 
-  void _sendMessage(String storyId) async {
+  void _sendMessage(String storyId) {
+    if (!_canUseContext || storyId.isEmpty) return;
+
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
-    try {
-      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-      if (currentUserId.isEmpty) return;
+    // First update UI state while we're definitely still mounted
+    setState(() {
+      _showReplyBox = false;
+    });
+    _messageController.clear();
+    _resumeStory();
 
-      // Get the story to find the recipient user
-      final storyDoc = await FirebaseFirestore.instance
-          .collection('stories')
-          .doc(storyId)
-          .get();
+    // Then handle the async work in a detached Future
+    Future.microtask(() async {
+      try {
+        final String currentUserId =
+            FirebaseAuth.instance.currentUser?.uid ?? '';
+        if (currentUserId.isEmpty) return;
 
-      if (!storyDoc.exists) return;
+        // Get the story to find the recipient user
+        final storyDoc = await FirebaseFirestore.instance
+            .collection('stories')
+            .doc(storyId)
+            .get();
 
-      final storyData = storyDoc.data() as Map<String, dynamic>;
-      final String recipientId = storyData['userId'] as String? ?? '';
+        if (!storyDoc.exists) return;
 
-      if (recipientId.isEmpty || recipientId == currentUserId) return;
+        final storyData = storyDoc.data() as Map<String, dynamic>;
+        final String recipientId = storyData['userId'] as String? ?? '';
 
-      // Create messages using the new schema
-      final senderMessage = {
-        'senderId': currentUserId.toString(),
-        'recipientId': recipientId.toString(),
-        'content': message,
-        'timestamp': Timestamp.now(),
-        'isRead': false,
-        'isSent': true,
-        'isStoryReply': true,
-        'storyId': storyId,
-      };
+        if (recipientId.isEmpty || recipientId == currentUserId) return;
 
-      final recipientMessage = {
-        'senderId': currentUserId.toString(),
-        'recipientId': recipientId.toString(),
-        'content': message,
-        'timestamp': Timestamp.now(),
-        'isRead': false,
-        'isSent': true,
-        'isStoryReply': true,
-        'storyId': storyId,
-      };
+        // Create messages
+        final senderMessage = {
+          'senderId': currentUserId.toString(),
+          'recipientId': recipientId.toString(),
+          'content': message,
+          'timestamp': Timestamp.now(),
+          'isRead': false,
+          'isSent': true,
+          'isStoryReply': true,
+          'storyId': storyId,
+        };
 
-      final conversationIdSender = "$currentUserId-$recipientId";
-      final conversationIdRecipient = "$recipientId-$currentUserId";
-      final conversationRefSender = FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(conversationIdSender);
-      final conversationRefRecipient = FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(conversationIdRecipient);
+        final recipientMessage = Map<String, dynamic>.from(senderMessage);
 
-      // Save sender's message
-      final senderSnap = await conversationRefSender.get();
-      if (senderSnap.exists) {
-        await FirebaseFirestore.instance.runTransaction((transaction) async {
-          final freshSnap = await transaction.get(conversationRefSender);
-          transaction.update(freshSnap.reference, {
+        // Create conversation references
+        final conversationIdSender = "$currentUserId-$recipientId";
+        final conversationIdRecipient = "$recipientId-$currentUserId";
+        final conversationRefSender = FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(conversationIdSender);
+        final conversationRefRecipient = FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(conversationIdRecipient);
+
+        // Execute operations without depending on UI state
+        final batch = FirebaseFirestore.instance.batch();
+
+        // Get conversation documents
+        final senderSnap = await conversationRefSender.get();
+        final recipientSnap = await conversationRefRecipient.get();
+
+        // Update or create conversations
+        if (senderSnap.exists) {
+          batch.update(conversationRefSender, {
             'messages': FieldValue.arrayUnion([senderMessage]),
             'lastMessage': senderMessage['content'],
             'timestamp': senderMessage['timestamp'],
           });
-        });
-      } else {
-        await conversationRefSender.set({
-          'senderId': currentUserId,
-          'recipientId': recipientId,
-          'messages': [senderMessage],
-          'lastMessage': senderMessage['content'],
-          'timestamp': senderMessage['timestamp'],
-          'participants': [currentUserId, recipientId],
-        });
-      }
+        } else {
+          batch.set(conversationRefSender, {
+            'senderId': currentUserId,
+            'recipientId': recipientId,
+            'messages': [senderMessage],
+            'lastMessage': senderMessage['content'],
+            'timestamp': senderMessage['timestamp'],
+            'participants': [currentUserId, recipientId],
+          });
+        }
 
-      // Save recipient's message
-      final recipientSnap = await conversationRefRecipient.get();
-      if (recipientSnap.exists) {
-        await FirebaseFirestore.instance.runTransaction((transaction) async {
-          final freshSnap = await transaction.get(conversationRefRecipient);
-          transaction.update(freshSnap.reference, {
+        if (recipientSnap.exists) {
+          batch.update(conversationRefRecipient, {
             'messages': FieldValue.arrayUnion([recipientMessage]),
             'lastMessage': recipientMessage['content'],
             'timestamp': recipientMessage['timestamp'],
           });
-        });
-      } else {
-        await conversationRefRecipient.set({
-          'senderId': recipientId,
-          'recipientId': currentUserId,
-          'messages': [recipientMessage],
-          'lastMessage': recipientMessage['content'],
-          'timestamp': recipientMessage['timestamp'],
-          'participants': [recipientId, currentUserId],
-        });
+        } else {
+          batch.set(conversationRefRecipient, {
+            'senderId': recipientId,
+            'recipientId': currentUserId,
+            'messages': [recipientMessage],
+            'lastMessage': recipientMessage['content'],
+            'timestamp': recipientMessage['timestamp'],
+            'participants': [recipientId, currentUserId],
+          });
+        }
+
+        // Commit all operations atomically
+        await batch.commit();
+
+        // Notify the parent widget if available and widget is still mounted
+        if (_canUseContext && widget.onSendMessage != null) {
+          widget.onSendMessage!(storyId, message);
+        }
+      } catch (e) {
+        print("Error sending message: $e");
+
+        // Only show error message if widget is still mounted
+        if (_canUseContext) {
+          _showSnackBar(
+              _language == 'tr'
+                  ? 'Mesaj gönderilemedi'
+                  : 'Failed to send message',
+              isError: true);
+        }
+      }
+    });
+  }
+
+  // Add method to view current user's stories
+  void _viewMyStories() async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null || !_canUseContext) return;
+
+    try {
+      // Show loading indicator
+      _showSnackBar(_language == 'tr'
+          ? 'Hikayeleriniz yükleniyor...'
+          : 'Loading your stories...');
+
+      // Fetch current user's active stories
+      final storiesQuery = await FirebaseFirestore.instance
+          .collection('stories')
+          .where('userId', isEqualTo: currentUserId)
+          .where('expiresAt', isGreaterThan: Timestamp.now())
+          .orderBy('expiresAt', descending: true)
+          .get();
+
+      if (storiesQuery.docs.isEmpty) {
+        if (_canUseContext) {
+          _showSnackBar(
+              _language == 'tr'
+                  ? 'Aktif hikayeniz bulunmuyor'
+                  : 'You have no active stories',
+              isError: true);
+        }
+        return;
       }
 
-      _messageController.clear();
-      setState(() {
-        _showReplyBox = false;
-      });
+      // Get current user's information
+      final userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .get();
 
-      // Notify the parent widget if callback exists
-      if (widget.onSendMessage != null) {
-        widget.onSendMessage!(storyId, message);
+      String userName = FirebaseAuth.instance.currentUser?.displayName ?? 'You';
+      String userImage = FirebaseAuth.instance.currentUser?.photoURL ??
+          'https://picsum.photos/100';
+
+      // Update with user info from Firestore if available
+      if (userSnapshot.exists) {
+        final userData = userSnapshot.data() as Map<String, dynamic>?;
+        if (userData != null) {
+          userName = userData['displayname'] ?? userName;
+          userImage = userData['photoURL'] ?? userImage;
+        }
       }
 
-      _resumeStory();
+      // Convert query results to story items
+      List<Map<String, dynamic>> storyItems = storiesQuery.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'id': doc.id,
+          'media': data['media'],
+          'description': data['description'] ?? '',
+          'timestamp': data['timestamp'],
+          'userId': data['userId'],
+          'viewedBy': data['viewedBy'] ?? [],
+          'likedBy': data['likedBy'] ?? [],
+        };
+      }).toList();
+
+      // Navigate to view the stories
+      if (_canUseContext) {
+        // First close current story viewer
+        Navigator.of(context).pop();
+
+        // Then open new story viewer with user's stories
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            opaque: false,
+            pageBuilder: (context, _, __) => StoryViewerWidget(
+              stories: storyItems,
+              userName: userName,
+              userImage: userImage,
+              isOwnStory: true,
+              onClose: () {
+                // Use the same onClose as the parent widget
+                if (widget.onClose != null) {
+                  widget.onClose();
+                }
+              },
+              onLike: widget.onLike,
+              onSendMessage: widget.onSendMessage,
+            ),
+            transitionsBuilder: (context, animation, _, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        );
+      }
     } catch (e) {
-      print("Error sending message: $e");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ref.watch(lang) == 'tr'
-              ? 'Mesaj gönderilemedi'
-              : 'Failed to send message'),
-          duration: const Duration(seconds: 2),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print("Error loading user stories: $e");
+      if (_canUseContext) {
+        _showSnackBar(
+            _language == 'tr'
+                ? 'Hikayeler yüklenirken hata oluştu'
+                : 'Error loading stories',
+            isError: true);
+      }
     }
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color color,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+  // Helper method to mark stories as viewed - with improved safety
+  void _markAsViewed(String storyId) {
+    if (storyId.isEmpty || _isDisposing) return;
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        // Use a detached Future to avoid context dependency
+        Future.microtask(() {
+          // Additional check in case widget is disposed during async gap
+          if (_isDisposing) return;
+
+          FirebaseFirestore.instance.collection('stories').doc(storyId).update({
+            'viewedBy': FieldValue.arrayUnion([currentUser.uid])
+          }).catchError((error) {
+            print("Error marking story as viewed: $error");
+          });
+        });
+      }
+    } catch (e) {
+      print("Error marking story as viewed: $e");
+    }
+  }
+
+  // New method to confirm story deletion with improved safety
+  void _confirmDeleteHighlight() {
+    if (widget.highlightIndex == null || !_canUseContext) return;
+
+    _pauseStory(); // Pause the story while dialog is shown
+
+    _safeShowDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return WillPopScope(
+            onWillPop: () async {
+              _resumeStory(); // Resume story playback on back button
+              return true;
+            },
+            child: AlertDialog(
+              title: Text(
+                _language == 'tr' ? 'Hikayeyi Sil' : 'Delete Story',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: Text(_language == 'tr'
+                  ? 'Bu hikaye kalıcı olarak silinecek. Emin misiniz?'
+                  : 'This story will be permanently deleted. Are you sure?'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    _resumeStory(); // Resume story playback
+                  },
+                  child: Text(
+                    _language == 'tr' ? 'İptal' : 'Cancel',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    if (_canUseContext) {
+                      _deleteHighlight();
+                    }
+                  },
+                  child: Text(
+                    _language == 'tr' ? 'Evet, Sil' : 'Yes, Delete',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          );
+        });
+  }
+
+  // Improved method for highlight deletion with completely safe context handling
+  void _deleteHighlight() {
+    if (widget.highlightIndex == null || !_canUseContext) return;
+
+    // Show loading dialog with safe context handling
+    BuildContext? dialogContext;
+
+    _safeShowDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        dialogContext = ctx;
+        return WillPopScope(
+          onWillPop: () async => false, // Prevent dismissal with back button
+          child: AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text(_language == 'tr' ? 'Siliniyor...' : 'Deleting...'),
+              ],
+            ),
+          ),
+        );
+      },
     );
+
+    // Handle the actual deletion in a detached context
+    Future.microtask(() async {
+      try {
+        // Get current user ID
+        final String currentUserId =
+            FirebaseAuth.instance.currentUser?.uid ?? '';
+        if (currentUserId.isEmpty) {
+          _closeDialogSafely(dialogContext);
+          if (_canUseContext) {
+            _showSnackBar(
+                _language == 'tr'
+                    ? 'Kimlik doğrulama hatası'
+                    : 'Authentication error',
+                isError: true);
+          }
+          return;
+        }
+
+        // Process the deletion operations...
+        // ...existing deletion code but with _canUseContext checks before UI operations...
+
+        // Close loading dialog
+        _closeDialogSafely(dialogContext);
+
+        // Only show success and close if still mounted
+        if (_canUseContext) {
+          _showSnackBar(_language == 'tr' ? 'Hikaye silindi' : 'Story deleted');
+          // Use Future.microtask to prevent calling onClose during build phase
+          Future.microtask(() {
+            if (_canUseContext) {
+              widget.onClose();
+            }
+          });
+        }
+      } catch (e) {
+        print("Error deleting highlight: $e");
+
+        // Close dialog safely
+        _closeDialogSafely(dialogContext);
+
+        // Show error if still mounted
+        if (_canUseContext) {
+          _showSnackBar(
+              _language == 'tr'
+                  ? 'Hikaye silinirken bir hata oluştu'
+                  : 'Error deleting story',
+              isError: true);
+        }
+      }
+    });
+  }
+
+  // Helper method to safely close dialogs
+  void _closeDialogSafely(BuildContext? dialogContext) {
+    if (dialogContext != null && !_isDisposing) {
+      try {
+        if (Navigator.canPop(dialogContext)) {
+          Navigator.of(dialogContext, rootNavigator: true).pop();
+        }
+      } catch (e) {
+        print("Error closing dialog: $e");
+      }
+    }
   }
 
   bool _isLiked() {
@@ -680,20 +1106,6 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
     } catch (e) {
       print("Error formatting timestamp: $e");
       return '';
-    }
-  }
-
-  // Helper method to mark stories as viewed
-  void _markAsViewed(String storyId) {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        FirebaseFirestore.instance.collection('stories').doc(storyId).update({
-          'viewedBy': FieldValue.arrayUnion([currentUser.uid])
-        });
-      }
-    } catch (e) {
-      print("Error marking story as viewed: $e");
     }
   }
 }

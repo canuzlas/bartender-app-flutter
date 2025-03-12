@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
 import 'package:bartender/S/mainPart/profileScreen/profileScreenController.dart';
-import 'package:bartender/S/mainPart/storyWidget/storyViewerWidget.dart';
+// Removed story widget import
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -162,8 +162,6 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
                           } else if (item == 4) {
                             _controller.viewPostStatistics(context, ref);
                           } else if (item == 5) {
-                            _shareStory(context);
-                          } else if (item == 6) {
                             await _controller.confirmLogout(context, langMain);
                           }
                         },
@@ -224,21 +222,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
                               ],
                             ),
                           ),
+                          // Removed story-related menu item
                           PopupMenuItem<int>(
                             value: 5,
-                            child: Row(
-                              children: [
-                                Icon(Icons.add_circle_outline,
-                                    color: textColor),
-                                const SizedBox(width: 8),
-                                Text(langMain == 'tr'
-                                    ? 'Hikaye Paylaş'
-                                    : 'Share Story'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<int>(
-                            value: 6,
                             child: Row(
                               children: [
                                 Icon(Icons.logout, color: textColor),
@@ -254,9 +240,7 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
                   SliverToBoxAdapter(
                     child: Column(
                       children: [
-                        // Stories/Highlights section
-                        _buildHighlightsSection(
-                            userData, darkThemeMain, primaryColor, textColor),
+                        // Removed highlights/stories section
                         // Profile section with online indicator
                         Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -546,82 +530,8 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
     );
   }
 
-  // New method for building highlights/stories section
-  Widget _buildHighlightsSection(Map<String, dynamic> userData, bool darkTheme,
-      Color primaryColor, Color textColor) {
-    final List<dynamic> highlights = userData['highlights'] ?? [];
+  // Helper methods
 
-    return Container(
-      height: 100,
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: highlights.length + 1, // +1 for the 'Add' button
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: () => _addHighlight(),
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color:
-                              darkTheme ? Colors.grey[700]! : Colors.grey[300]!,
-                          width: 1,
-                        ),
-                      ),
-                      child: Icon(Icons.add, color: primaryColor, size: 30),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('New', style: TextStyle(fontSize: 12, color: textColor)),
-                ],
-              ),
-            );
-          }
-
-          final highlight = highlights[index - 1];
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Column(
-              children: [
-                GestureDetector(
-                  onTap: () => _viewHighlight(highlight),
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: primaryColor, width: 2),
-                      image: DecorationImage(
-                        image: NetworkImage(
-                            highlight['cover'] ?? 'https://picsum.photos/100'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  highlight['title'] ?? 'Story',
-                  style: TextStyle(fontSize: 12, color: textColor),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // New helper methods
   String _getLastSeenText(DateTime lastSeen, String language) {
     final now = DateTime.now();
     final difference = now.difference(lastSeen);
@@ -705,421 +615,9 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
     );
   }
 
-  void _addHighlight() {
-    _createOrShareStory(isHighlight: true);
-  }
+  // All story-related methods have been removed
 
-  void _shareStory(BuildContext context) {
-    _createOrShareStory(isHighlight: false);
-  }
-
-  void _createOrShareStory({bool isHighlight = false}) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor:
-          ref.watch(darkTheme) ? const Color(0xFF1E1E1E) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.0)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              isHighlight
-                  ? (ref.watch(lang) == 'tr'
-                      ? 'Hikaye Koleksiyonu Oluştur'
-                      : 'Create Story Highlight')
-                  : (ref.watch(lang) == 'tr' ? 'Hikaye Paylaş' : 'Share Story'),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: ref.watch(darkTheme) ? Colors.white : Colors.black,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildStoryOption(
-                  Icons.camera_alt,
-                  ref.watch(lang) == 'tr' ? 'Kamera' : 'Camera',
-                  () =>
-                      _pickStoryMedia(isCamera: true, isHighlight: isHighlight),
-                ),
-                _buildStoryOption(
-                  Icons.photo_library,
-                  ref.watch(lang) == 'tr' ? 'Galeri' : 'Gallery',
-                  () => _pickStoryMedia(
-                      isCamera: false, isHighlight: isHighlight),
-                ),
-                _buildStoryOption(
-                  Icons.text_fields,
-                  ref.watch(lang) == 'tr' ? 'Yazı' : 'Text',
-                  () => _createTextStory(isHighlight: isHighlight),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (!isHighlight)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildStoryOption(
-                    Icons.music_note,
-                    ref.watch(lang) == 'tr' ? 'Müzik' : 'Music',
-                    () => _createMusicStory(),
-                  ),
-                  _buildStoryOption(
-                    Icons.poll,
-                    ref.watch(lang) == 'tr' ? 'Anket' : 'Poll',
-                    () => _createPollStory(),
-                  ),
-                  _buildStoryOption(
-                    Icons.location_on,
-                    ref.watch(lang) == 'tr' ? 'Konum' : 'Location',
-                    () => _createLocationStory(),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStoryOption(IconData icon, String label, VoidCallback onTap) {
-    final primaryColor =
-        ref.watch(darkTheme) ? Colors.orangeAccent : Colors.deepOrange;
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
-      },
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-              border: Border.all(color: primaryColor, width: 1),
-            ),
-            child: Icon(icon, color: primaryColor, size: 28),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: ref.watch(darkTheme) ? Colors.white70 : Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _pickStoryMedia(
-      {required bool isCamera, bool isHighlight = false}) async {
-    final ImagePicker picker = ImagePicker();
-    try {
-      final XFile? pickedFile = await picker.pickImage(
-        source: isCamera ? ImageSource.camera : ImageSource.gallery,
-        imageQuality: 70,
-      );
-
-      if (pickedFile == null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:
-                Text(ref.watch(lang) == 'tr' ? 'İptal edildi' : 'Cancelled')));
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              ref.watch(lang) == 'tr' ? 'Yükleniyor...' : 'Uploading...')));
-
-      // Upload to Firebase Storage
-      final File imageFile = File(pickedFile.path);
-      final String fileName = const Uuid().v4();
-      final Reference storageRef = FirebaseStorage.instance
-          .ref()
-          .child('stories')
-          .child('${auth.currentUser!.uid}')
-          .child('$fileName.jpg');
-
-      final UploadTask uploadTask = storageRef.putFile(imageFile);
-      final TaskSnapshot taskSnapshot = await uploadTask;
-      final String downloadUrl = await taskSnapshot.ref.getDownloadURL();
-
-      // Create story document in Firestore
-      final now = Timestamp.now();
-      final expiresAt =
-          Timestamp.fromDate(DateTime.now().add(const Duration(hours: 24)));
-
-      final storyData = {
-        'userId': auth.currentUser!.uid,
-        'userPhotoURL': auth.currentUser!.photoURL,
-        'userName': auth.currentUser!.displayName ?? 'User',
-        'media': downloadUrl,
-        'description': '',
-        'timestamp': now,
-        'expiresAt': expiresAt,
-        'viewedBy': [],
-        'likedBy': [],
-      };
-
-      DocumentReference storyRef =
-          await FirebaseFirestore.instance.collection('stories').add(storyData);
-
-      if (isHighlight) {
-        // Also add to user's highlights collection
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(auth.currentUser!.uid)
-            .get();
-
-        List<dynamic> highlights = List<dynamic>.from(
-            (userDoc.data() as Map<String, dynamic>)['highlights'] ?? []);
-
-        // Check if we need to create a new highlight or add to an existing one
-        String highlightTitle = "My Story";
-        await showDialog(
-          context: context,
-          builder: (context) {
-            final TextEditingController titleController =
-                TextEditingController();
-            titleController.text = highlightTitle;
-            return AlertDialog(
-              title: Text(ref.watch(lang) == 'tr'
-                  ? 'Koleksiyon Adı'
-                  : 'Highlight Name'),
-              content: TextField(
-                controller: titleController,
-                decoration: InputDecoration(
-                  hintText: ref.watch(lang) == 'tr' ? 'Başlık...' : 'Title...',
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text(ref.watch(lang) == 'tr' ? 'Tamam' : 'OK'),
-                ),
-              ],
-            );
-          },
-        ).then((_) {
-          highlightTitle = "My Story"; // Set a default value
-        });
-
-        Map<String, dynamic> newHighlight = {
-          'title': highlightTitle,
-          'cover': downloadUrl,
-          'stories': [storyData],
-          'createdAt': now,
-        };
-
-        highlights.add(newHighlight);
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(auth.currentUser!.uid)
-            .update({'highlights': highlights});
-      }
-
-      // Update state to show the new story
-      ref.read(refreshingProvider.notifier).update((state) => !state);
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(isHighlight
-            ? (ref.watch(lang) == 'tr'
-                ? 'Hikaye koleksiyonuna eklendi'
-                : 'Added to story highlights')
-            : (ref.watch(lang) == 'tr' ? 'Hikaye paylaşıldı' : 'Story shared')),
-        backgroundColor: Colors.green,
-      ));
-    } catch (e) {
-      print("Error uploading story: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error: ${e.toString()}'),
-        backgroundColor: Colors.red,
-      ));
-    }
-  }
-
-  void _createTextStory({bool isHighlight = false}) {
-    final TextEditingController textController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor:
-            ref.watch(darkTheme) ? const Color(0xFF1E1E1E) : Colors.white,
-        title: Text(
-          ref.watch(lang) == 'tr'
-              ? 'Metin Hikayesi Oluştur'
-              : 'Create Text Story',
-          style: TextStyle(
-            color: ref.watch(darkTheme) ? Colors.white : Colors.black,
-          ),
-        ),
-        content: TextField(
-          controller: textController,
-          maxLines: 5,
-          maxLength: 100,
-          decoration: InputDecoration(
-            hintText: ref.watch(lang) == 'tr'
-                ? 'Hikayenizi yazın...'
-                : 'Write your story...',
-            border: const OutlineInputBorder(),
-            filled: true,
-            fillColor: ref.watch(darkTheme) ? Colors.black54 : Colors.grey[100],
-          ),
-          style: TextStyle(
-            color: ref.watch(darkTheme) ? Colors.white : Colors.black,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              ref.watch(lang) == 'tr' ? 'İptal' : 'Cancel',
-              style: const TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (textController.text.trim().isEmpty) {
-                return;
-              }
-
-              Navigator.pop(context);
-
-              try {
-                // Create text story document in Firestore
-                final now = Timestamp.now();
-                final expiresAt = Timestamp.fromDate(
-                    DateTime.now().add(const Duration(hours: 24)));
-
-                final storyData = {
-                  'userId': auth.currentUser!.uid,
-                  'userPhotoURL': auth.currentUser!.photoURL,
-                  'userName': auth.currentUser!.displayName ?? 'User',
-                  'media': null,
-                  'description': textController.text.trim(),
-                  'timestamp': now,
-                  'expiresAt': expiresAt,
-                  'viewedBy': [],
-                  'likedBy': [],
-                };
-
-                DocumentReference storyRef = await FirebaseFirestore.instance
-                    .collection('stories')
-                    .add(storyData);
-
-                if (isHighlight) {
-                  // Add logic for adding to highlights collection
-                  DocumentSnapshot userDoc = await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(auth.currentUser!.uid)
-                      .get();
-
-                  List<dynamic> highlights = List<dynamic>.from(
-                      (userDoc.data() as Map<String, dynamic>)['highlights'] ??
-                          []);
-
-                  Map<String, dynamic> newHighlight = {
-                    'title': 'Text Story',
-                    'cover': auth.currentUser!.photoURL ??
-                        'https://picsum.photos/100',
-                    'stories': [storyData],
-                    'createdAt': now,
-                  };
-
-                  highlights.add(newHighlight);
-
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(auth.currentUser!.uid)
-                      .update({'highlights': highlights});
-                }
-
-                // Update state to show the new story
-                ref.read(refreshingProvider.notifier).update((state) => !state);
-
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(isHighlight
-                      ? (ref.watch(lang) == 'tr'
-                          ? 'Metin hikayesi koleksiyona eklendi'
-                          : 'Text story added to highlights')
-                      : (ref.watch(lang) == 'tr'
-                          ? 'Metin hikayesi paylaşıldı'
-                          : 'Text story shared')),
-                  backgroundColor: Colors.green,
-                ));
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Error: ${e.toString()}'),
-                  backgroundColor: Colors.red,
-                ));
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ref.watch(darkTheme)
-                  ? Colors.orangeAccent
-                  : Colors.deepOrange,
-            ),
-            child: Text(ref.watch(lang) == 'tr' ? 'Paylaş' : 'Share'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _createMusicStory() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ref.watch(lang) == 'tr'
-          ? 'Müzik hikayesi özelliği yakında eklenecek'
-          : 'Music story feature coming soon'),
-    ));
-  }
-
-  void _createPollStory() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ref.watch(lang) == 'tr'
-          ? 'Anket hikayesi özelliği yakında eklenecek'
-          : 'Poll story feature coming soon'),
-    ));
-  }
-
-  void _createLocationStory() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ref.watch(lang) == 'tr'
-          ? 'Konum hikayesi özelliği yakında eklenecek'
-          : 'Location story feature coming soon'),
-    ));
-  }
-
-  void _viewHighlight(dynamic highlight) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => StoryViewerWidget(
-        stories: highlight['stories'] ?? [highlight],
-        userName: highlight['title'] ?? 'Story',
-        userImage: highlight['cover'] ?? 'https://picsum.photos/100',
-        onClose: () => Navigator.pop(context),
-      ),
-    );
-  }
-
-  // New method for archive tab
+  // Archive tab
   Widget _buildArchivedTab(bool darkTheme, Color primaryColor, Color textColor,
       Color secondaryTextColor) {
     return RefreshIndicator(
@@ -1164,7 +662,6 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
     );
   }
 
-  // Add the missing _buildLikesTab method
   Widget _buildLikesTab(bool darkTheme, Color primaryColor, Color textColor,
       Color secondaryTextColor) {
     return RefreshIndicator(
@@ -1695,7 +1192,6 @@ class _ProfilescreenmainState extends ConsumerState<Profilescreenmain>
     );
   }
 
-  // Implement missing methods
   void _editHeaderImage() {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(ref.watch(lang) == 'tr'
