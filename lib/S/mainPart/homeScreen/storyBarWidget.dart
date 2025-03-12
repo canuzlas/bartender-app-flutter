@@ -896,6 +896,14 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
                       isDarkTheme: isDarkTheme,
                       onTap: () {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        // Show upload starting SnackBar
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(language == 'tr'
+                              ? 'Hikaye yükleniyor...'
+                              : 'Uploading story...'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: Colors.blue,
+                        ));
                         _pickStoryMedia(isCamera: true);
                       },
                     ),
@@ -907,6 +915,14 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
                       isDarkTheme: isDarkTheme,
                       onTap: () {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        // Show upload starting SnackBar
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(language == 'tr'
+                              ? 'Hikaye yükleniyor...'
+                              : 'Uploading story...'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: Colors.blue,
+                        ));
                         _pickStoryMedia(isCamera: false);
                       },
                     ),
@@ -918,6 +934,13 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
                       isDarkTheme: isDarkTheme,
                       onTap: () {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(language == 'tr'
+                              ? 'Metin hikayesi hazırlanıyor...'
+                              : 'Preparing text story...'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: Colors.green,
+                        ));
                         _createTextStory();
                       },
                     ),
@@ -933,6 +956,21 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
                           onTap: () {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             _viewCurrentUserStories();
+                          },
+                        ),
+                      ),
+                    // Add delete story option when user has stories
+                    if (hasExistingStories)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12.0),
+                        child: _buildStoryOptionButton(
+                          icon: Icons.delete,
+                          label: language == 'tr' ? 'Sil' : 'Delete',
+                          color: Colors.red,
+                          isDarkTheme: isDarkTheme,
+                          onTap: () {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            _showDeleteStoryDialog();
                           },
                         ),
                       ),
@@ -1013,5 +1051,249 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
         ),
       ),
     );
+  }
+
+  // Add a method to show delete story dialog
+  void _showDeleteStoryDialog() async {
+    final language = ref.read(lang);
+    final isDarkTheme = ref.read(darkTheme);
+
+    if (_auth.currentUser == null) return;
+
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(language == 'tr'
+            ? 'Hikayeler yükleniyor...'
+            : 'Loading stories...'),
+        duration: const Duration(seconds: 2),
+      ));
+
+      // Fetch current user's stories that haven't expired
+      final storiesSnapshot = await FirebaseFirestore.instance
+          .collection('stories')
+          .where('userId', isEqualTo: _auth.currentUser!.uid)
+          .where('expiresAt', isGreaterThan: Timestamp.now())
+          .orderBy('expiresAt', descending: true)
+          .get();
+
+      if (storiesSnapshot.docs.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(language == 'tr'
+                  ? 'Silinecek hikaye bulunamadı'
+                  : 'No stories to delete'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Prepare story list
+      List<Map<String, dynamic>> stories = [];
+      for (var doc in storiesSnapshot.docs) {
+        final data = doc.data();
+        stories.add({
+          'id': doc.id,
+          'preview': data['media'] != null
+              ? 'Image'
+              : (data['description'] as String).length > 20
+                  ? '${(data['description'] as String).substring(0, 20)}...'
+                  : data['description'],
+          'isImage': data['media'] != null,
+          'timestamp': (data['timestamp'] as Timestamp).toDate(),
+        });
+      }
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor:
+                isDarkTheme ? const Color(0xFF1E1E1E) : Colors.white,
+            title: Text(
+              language == 'tr' ? 'Hikaye Sil' : 'Delete Story',
+              style: TextStyle(
+                color: isDarkTheme ? Colors.white : Colors.black,
+              ),
+            ),
+            content: Container(
+              width: double.maxFinite,
+              height: stories.length > 3 ? 200 : null,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: stories.length,
+                itemBuilder: (context, index) {
+                  final story = stories[index];
+                  final time = _formatTimestamp(story['timestamp']);
+
+                  return ListTile(
+                    leading: Icon(
+                      story['isImage'] ? Icons.image : Icons.text_fields,
+                      color: isDarkTheme ? Colors.white70 : Colors.black87,
+                    ),
+                    title: Text(
+                      story['isImage']
+                          ? (language == 'tr'
+                              ? 'Resim hikayesi'
+                              : 'Image story')
+                          : '${story['preview']}',
+                      style: TextStyle(
+                        color: isDarkTheme ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    subtitle: Text(
+                      time,
+                      style: TextStyle(
+                        color: isDarkTheme ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deleteStory(story['id']);
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  language == 'tr' ? 'İptal' : 'Cancel',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Add a method to delete story
+  Future<void> _deleteStory(String storyId) async {
+    final language = ref.read(lang);
+
+    if (_auth.currentUser == null) return;
+
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            language == 'tr' ? 'Hikaye siliniyor...' : 'Deleting story...'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.orange,
+      ));
+
+      // Get the story document
+      final storyDoc = await FirebaseFirestore.instance
+          .collection('stories')
+          .doc(storyId)
+          .get();
+
+      if (!storyDoc.exists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                language == 'tr' ? 'Hikaye bulunamadı' : 'Story not found'),
+            backgroundColor: Colors.red,
+          ));
+        }
+        return;
+      }
+
+      final storyData = storyDoc.data() as Map<String, dynamic>;
+
+      // Check if there's an image to delete from storage
+      if (storyData['media'] != null) {
+        try {
+          // Extract the file path from the URL
+          final String mediaUrl = storyData['media'] as String;
+          // Create a reference to the file in Firebase Storage
+          final ref = FirebaseStorage.instance.refFromURL(mediaUrl);
+          // Delete the file
+          await ref.delete();
+        } catch (storageError) {
+          print('Error deleting story media: $storageError');
+          // Continue with deletion of Firestore document even if media deletion fails
+        }
+      }
+
+      // Delete story document from Firestore
+      await FirebaseFirestore.instance
+          .collection('stories')
+          .doc(storyId)
+          .delete();
+
+      // Update state to reflect the deletion
+      ref.read(refreshingProvider.notifier).update((state) => !state);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(language == 'tr'
+              ? 'Hikaye başarıyla silindi'
+              : 'Story deleted successfully'),
+          backgroundColor: Colors.green,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(language == 'tr'
+              ? 'Hikaye silinirken hata oluştu'
+              : 'Error deleting story'),
+          backgroundColor: Colors.red,
+        ));
+        print('Error deleting story: $e');
+      }
+    }
+  }
+
+  // Helper method to format timestamp
+  String _formatTimestamp(DateTime timestamp) {
+    final language = ref.read(lang);
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 1) {
+      return language == 'tr' ? 'Az önce' : 'Just now';
+    } else if (difference.inHours < 1) {
+      final minutes = difference.inMinutes;
+      return language == 'tr'
+          ? '$minutes dakika önce'
+          : '$minutes ${minutes == 1 ? 'minute' : 'minutes'} ago';
+    } else if (difference.inHours < 24) {
+      final hours = difference.inHours;
+      return language == 'tr'
+          ? '$hours saat önce'
+          : '$hours ${hours == 1 ? 'hour' : 'hours'} ago';
+    }
+
+    final day = timestamp.day;
+    final month = timestamp.month;
+    final hour = timestamp.hour;
+    final minute = timestamp.minute;
+
+    // Format minute with leading zero if needed
+    final formattedMinute = minute < 10 ? '0$minute' : '$minute';
+
+    return language == 'tr'
+        ? '$day/$month - $hour:$formattedMinute'
+        : '$month/$day - $hour:$formattedMinute';
   }
 }

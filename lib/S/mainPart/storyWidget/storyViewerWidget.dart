@@ -388,8 +388,8 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
                       // Spacer to push action buttons to the bottom
                       const Spacer(),
 
-                      // Delete button - only shown for own stories
-                      if (widget.isOwnStory && widget.highlightIndex != null)
+                      // Delete button - shown for all own stories, not just highlights
+                      if (widget.isOwnStory)
                         Padding(
                           padding: EdgeInsets.only(
                               bottom:
@@ -518,6 +518,17 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
+          // Delete Button - only shown if it's the user's own story
+          if (isCurrentUserStory)
+            _buildIconButton(
+              icon: Icons.delete_outline,
+              label: ref.watch(lang) == 'tr' ? 'Sil' : 'Delete',
+              color: Colors.red,
+              onTap: () {
+                _confirmDeleteHighlight();
+              },
+            ),
+
           // Like Button - only if not current user's story
           if (!isCurrentUserStory)
             _buildIconButton(
@@ -548,14 +559,6 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
                 });
               },
             ),
-
-          // My Stories Button - always show
-          _buildIconButton(
-            icon: Icons.auto_stories,
-            label: ref.watch(lang) == 'tr' ? 'Hikayelerim' : 'My Stories',
-            color: primaryColor,
-            onTap: () => _viewMyStories(),
-          ),
         ],
       ),
     );
@@ -929,7 +932,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
 
   // New method to confirm story deletion with improved safety
   void _confirmDeleteHighlight() {
-    if (widget.highlightIndex == null || !_canUseContext) return;
+    if (!_canUseContext) return;
 
     _pauseStory(); // Pause the story while dialog is shown
 
@@ -981,7 +984,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
 
   // Improved method for highlight deletion with completely safe context handling
   void _deleteHighlight() {
-    if (widget.highlightIndex == null || !_canUseContext) return;
+    if (!_canUseContext) return; // Remove the widget.highlightIndex check
 
     // Show loading dialog with safe context handling
     BuildContext? dialogContext;
@@ -1024,8 +1027,23 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
           return;
         }
 
-        // Process the deletion operations...
-        // ...existing deletion code but with _canUseContext checks before UI operations...
+        // Get the story ID to delete
+        final storyId = widget.stories[_currentIndex]['id'];
+        if (storyId == null) {
+          _closeDialogSafely(dialogContext);
+          if (_canUseContext) {
+            _showSnackBar(
+                _language == 'tr' ? 'Hikaye bulunamadı' : 'Story not found',
+                isError: true);
+          }
+          return;
+        }
+
+        // Delete the story from Firestore
+        await FirebaseFirestore.instance
+            .collection('stories')
+            .doc(storyId.toString())
+            .delete();
 
         // Close loading dialog
         _closeDialogSafely(dialogContext);
@@ -1033,12 +1051,14 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
         // Only show success and close if still mounted
         if (_canUseContext) {
           _showSnackBar(_language == 'tr' ? 'Hikaye silindi' : 'Story deleted');
-          // Use Future.microtask to prevent calling onClose during build phase
-          Future.microtask(() {
-            if (_canUseContext) {
-              widget.onClose();
-            }
-          });
+
+          // Close the story viewer after deletion
+          Navigator.of(context).pop();
+
+          // Then call onClose callback if provided
+          if (widget.onClose != null) {
+            widget.onClose();
+          }
         }
       } catch (e) {
         print("Error deleting highlight: $e");
