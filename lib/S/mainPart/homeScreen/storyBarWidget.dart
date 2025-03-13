@@ -305,7 +305,7 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
       final Reference storageRef = FirebaseStorage.instance
           .ref()
           .child('stories')
-          .child('${_auth.currentUser!.uid}')
+          .child(_auth.currentUser!.uid)
           .child('$fileName.jpg');
 
       // Set metadata to further compress the image with JPEG format
@@ -366,8 +366,9 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
         'likedBy': [],
       });
 
-      if (!mounted)
+      if (!mounted) {
         return; // Check if widget is still mounted before continuing
+      }
 
       setState(() {
         _isUploading = false;
@@ -392,8 +393,9 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
         ),
       );
     } catch (e) {
-      if (!mounted)
+      if (!mounted) {
         return; // Check if widget is still mounted before continuing
+      }
 
       setState(() {
         _isUploading = false;
@@ -470,8 +472,9 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
               Navigator.pop(dialogContext);
 
               try {
-                if (!mounted)
+                if (!mounted) {
                   return; // Check if still mounted before updating state
+                }
 
                 setState(() {
                   _isUploading = true;
@@ -1119,7 +1122,7 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
                 color: isDarkTheme ? Colors.white : Colors.black,
               ),
             ),
-            content: Container(
+            content: SizedBox(
               width: double.maxFinite,
               height: stories.length > 3 ? 200 : null,
               child: ListView.builder(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,7 +19,7 @@ class StoryViewerWidget extends ConsumerStatefulWidget {
   final int? highlightIndex;
 
   const StoryViewerWidget({
-    Key? key,
+    super.key,
     required this.stories,
     required this.userName,
     required this.userImage,
@@ -29,7 +28,7 @@ class StoryViewerWidget extends ConsumerStatefulWidget {
     this.onSendMessage,
     this.isOwnStory = false, // Default to false for backward compatibility
     this.highlightIndex,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<StoryViewerWidget> createState() => _StoryViewerWidgetState();
@@ -78,7 +77,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
     });
 
     // Start animation after a short delay to ensure UI is built
-    Future.delayed(Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) {
         _loadStory();
       }
@@ -180,9 +179,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
         _loadStory();
       } else {
         // Last story finished - ensure proper navigation
-        if (widget.onClose != null) {
-          widget.onClose();
-        }
+        widget.onClose();
         Navigator.of(context).pop();
       }
     });
@@ -270,8 +267,9 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
                   // Story content
                   PageView.builder(
                     controller: _pageController,
-                    physics:
-                        _showReplyBox ? NeverScrollableScrollPhysics() : null,
+                    physics: _showReplyBox
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
                     itemCount: widget.stories.length,
                     onPageChanged: (index) {
                       if (index != _currentIndex) {
@@ -304,7 +302,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
                       // Progress indicator
                       Padding(
                         // Add extra padding for own stories to avoid notch area
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                             horizontal: 8.0, vertical: 8.0),
                         child: Row(
                           children: widget.stories
@@ -373,13 +371,11 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
                                   const Icon(Icons.close, color: Colors.white),
                               onPressed: () {
                                 // First notify parent via callback if needed
-                                if (widget.onClose != null) {
-                                  widget.onClose();
-                                }
+                                widget.onClose();
                                 // Then ensure we pop this screen
                                 Navigator.of(context).pop();
                               },
-                              padding: EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(8),
                             ),
                           ],
                         ),
@@ -631,7 +627,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
               left: 16,
               right: 16,
               child: Container(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.6),
                   borderRadius: BorderRadius.circular(8),
@@ -843,7 +839,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
 
       // Update with user info from Firestore if available
       if (userSnapshot.exists) {
-        final userData = userSnapshot.data() as Map<String, dynamic>?;
+        final userData = userSnapshot.data();
         if (userData != null) {
           userName = userData['displayname'] ?? userName;
           userImage = userData['photoURL'] ?? userImage;
@@ -881,9 +877,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
               isOwnStory: true,
               onClose: () {
                 // Use the same onClose as the parent widget
-                if (widget.onClose != null) {
-                  widget.onClose();
-                }
+                widget.onClose();
               },
               onLike: widget.onLike,
               onSendMessage: widget.onSendMessage,
@@ -999,8 +993,8 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
           child: AlertDialog(
             content: Row(
               children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 20),
+                const CircularProgressIndicator(),
+                const SizedBox(width: 20),
                 Text(_language == 'tr' ? 'Siliniyor...' : 'Deleting...'),
               ],
             ),
@@ -1056,9 +1050,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
           Navigator.of(context).pop();
 
           // Then call onClose callback if provided
-          if (widget.onClose != null) {
-            widget.onClose();
-          }
+          widget.onClose();
         }
       } catch (e) {
         print("Error deleting highlight: $e");

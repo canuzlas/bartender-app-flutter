@@ -7,10 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bartender/S/mainPart/commentsScreen/commentsScreenMain.dart';
 import 'package:bartender/S/mainPart/profileScreen/profileScreenController.dart';
 // Removed story widget import
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:uuid/uuid.dart';
 
 class Profilescreenmain extends ConsumerStatefulWidget {
   const Profilescreenmain({super.key});
