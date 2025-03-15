@@ -35,15 +35,13 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
     return Container(
       height: 100,
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: StreamBuilder<QuerySnapshot>(
+      child: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
-            .collection('stories')
-            .where('expiresAt', isGreaterThan: Timestamp.now())
-            .orderBy('expiresAt', descending: true)
-            .limit(20)
+            .collection('users')
+            .doc(_auth.currentUser?.uid)
             .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+        builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: SizedBox(
                 width: 20,
@@ -56,130 +54,165 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
             );
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+          // Get list of followed users from the user document
+          final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+          final List<String> followingIds =
+              List<String>.from(userData?['following'] ?? []);
 
-          final stories = snapshot.data?.docs ?? [];
+          // Add current user's ID to see their own stories
+          followingIds.add(_auth.currentUser?.uid ?? '');
 
-          // Group stories by user
-          final Map<String, List<QueryDocumentSnapshot>> userStories = {};
-          for (var story in stories) {
-            final Map<String, dynamic> data =
-                story.data() as Map<String, dynamic>;
-            final String userId = data['userId'] as String? ?? '';
-
-            if (userId.isNotEmpty) {
-              if (!userStories.containsKey(userId)) {
-                userStories[userId] = [];
-              }
-              userStories[userId]!.add(story);
-            }
-          }
-
-          if (userStories.isEmpty) {
-            return ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                // Still show the create story option
-                _buildCreateStoryItem(
-                    darkThemeMain, textColor, language, primaryColor),
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text(
-                      language == 'tr' ? 'Hikaye yok' : 'No stories',
-                      style: TextStyle(color: textColor.withOpacity(0.6)),
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('stories')
+                .where('userId',
+                    whereIn: followingIds.isEmpty ? [''] : followingIds)
+                .where('expiresAt', isGreaterThan: Timestamp.now())
+                .orderBy('expiresAt', descending: true)
+                .limit(20)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: primaryColor,
+                      strokeWidth: 2,
                     ),
                   ),
-                ),
-              ],
-            );
-          }
+                );
+              }
 
-          return ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              // Your Story / Create Story item
-              _buildCreateStoryItem(
-                  darkThemeMain, textColor, language, primaryColor),
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-              // Other users' stories
-              ...userStories.entries.map((entry) {
-                final userId = entry.key;
-                final userStoriesList = entry.value;
+              final stories = snapshot.data?.docs ?? [];
 
-                // Skip current user as it's already shown as "My Story"
-                if (userId == _auth.currentUser?.uid) {
-                  return const SizedBox.shrink();
+              // Group stories by user
+              final Map<String, List<QueryDocumentSnapshot>> userStories = {};
+              for (var story in stories) {
+                final Map<String, dynamic> data =
+                    story.data() as Map<String, dynamic>;
+                final String userId = data['userId'] as String? ?? '';
+
+                if (userId.isNotEmpty) {
+                  if (!userStories.containsKey(userId)) {
+                    userStories[userId] = [];
+                  }
+                  userStories[userId]!.add(story);
                 }
+              }
 
-                // Get the most recent story for display
-                final latestStory =
-                    userStoriesList.first.data() as Map<String, dynamic>;
-                final bool hasUnviewed = userStoriesList.any((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final List<dynamic> viewedBy =
-                      data['viewedBy'] as List<dynamic>? ?? [];
-                  return !viewedBy.contains(_auth.currentUser?.uid);
-                });
+              if (userStories.isEmpty) {
+                return ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    // Still show the create story option
+                    _buildCreateStoryItem(
+                        darkThemeMain, textColor, language, primaryColor),
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Text(
+                          language == 'tr' ? 'Hikaye yok' : 'No stories',
+                          style: TextStyle(color: textColor.withOpacity(0.6)),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
 
-                return FutureBuilder<DocumentSnapshot>(
-                  future: FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(userId)
-                      .get(),
-                  builder: (context, userSnapshot) {
-                    String userName = 'User';
-                    String userPhotoURL = 'https://picsum.photos/100';
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  // Your Story / Create Story item
+                  _buildCreateStoryItem(
+                      darkThemeMain, textColor, language, primaryColor),
 
-                    if (userSnapshot.hasData && userSnapshot.data != null) {
-                      final userData =
-                          userSnapshot.data!.data() as Map<String, dynamic>?;
-                      userName = userData?['displayname'] ?? 'User';
-                      userPhotoURL =
-                          userData?['photoURL'] ?? 'https://picsum.photos/100';
+                  // Other users' stories
+                  ...userStories.entries.map((entry) {
+                    final userId = entry.key;
+                    final userStoriesList = entry.value;
+
+                    // Skip current user as it's already shown as "My Story"
+                    if (userId == _auth.currentUser?.uid) {
+                      return const SizedBox.shrink();
                     }
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Column(
-                        children: [
-                          GestureDetector(
-                            onTap: () => _viewUserStories(
-                                userStoriesList, userName, userPhotoURL),
-                            child: Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color:
-                                      hasUnviewed ? primaryColor : Colors.grey,
-                                  width: hasUnviewed ? 2 : 1,
-                                ),
-                                image: DecorationImage(
-                                  image: NetworkImage(userPhotoURL),
-                                  fit: BoxFit.cover,
+                    // Get the most recent story for display
+                    final latestStory =
+                        userStoriesList.first.data() as Map<String, dynamic>;
+                    final bool hasUnviewed = userStoriesList.any((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final List<dynamic> viewedBy =
+                          data['viewedBy'] as List<dynamic>? ?? [];
+                      return !viewedBy.contains(_auth.currentUser?.uid);
+                    });
+
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(userId)
+                          .get(),
+                      builder: (context, userSnapshot) {
+                        String userName = 'User';
+                        String userPhotoURL = 'https://picsum.photos/100';
+
+                        if (userSnapshot.hasData && userSnapshot.data != null) {
+                          final userData = userSnapshot.data!.data()
+                              as Map<String, dynamic>?;
+                          userName = userData?['displayname'] ?? 'User';
+                          userPhotoURL = userData?['photoURL'] ??
+                              'https://picsum.photos/100';
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _viewUserStories(
+                                    userStoriesList, userName, userPhotoURL),
+                                child: Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: hasUnviewed
+                                          ? primaryColor
+                                          : Colors.grey,
+                                      width: hasUnviewed ? 2 : 1,
+                                    ),
+                                    image: DecorationImage(
+                                      image: NetworkImage(userPhotoURL),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                userName.length > 8
+                                    ? '${userName.substring(0, 8)}...'
+                                    : userName,
+                                style:
+                                    TextStyle(fontSize: 12, color: textColor),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            userName.length > 8
-                                ? '${userName.substring(0, 8)}...'
-                                : userName,
-                            style: TextStyle(fontSize: 12, color: textColor),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     );
-                  },
-                );
-              }),
-            ],
+                  }),
+                ],
+              );
+            },
           );
         },
       ),
@@ -603,17 +636,27 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
       final String currentUserId = _auth.currentUser?.uid ?? '';
       if (currentUserId.isEmpty) return;
 
-      await FirebaseFirestore.instance
-          .collection('stories')
-          .doc(storyId)
-          .update({
-        'likedBy': isLiked
-            ? FieldValue.arrayUnion([currentUserId])
-            : FieldValue.arrayRemove([currentUserId])
+      final storyRef =
+          FirebaseFirestore.instance.collection('stories').doc(storyId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final storyDoc = await transaction.get(storyRef);
+
+        if (!storyDoc.exists) return;
+
+        List<dynamic> likedBy =
+            List<dynamic>.from(storyDoc.data()?['likedBy'] ?? []);
+
+        if (isLiked && !likedBy.contains(currentUserId)) {
+          likedBy.add(currentUserId);
+        } else if (!isLiked && likedBy.contains(currentUserId)) {
+          likedBy.remove(currentUserId);
+        }
+
+        transaction.update(storyRef, {'likedBy': likedBy});
       });
     } catch (e) {
       if (!mounted) return;
-
       print('Error updating story like: ${e.toString()}');
     }
   }

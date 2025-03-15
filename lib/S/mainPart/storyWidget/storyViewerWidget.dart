@@ -55,12 +55,23 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
   // Cache language to avoid context access
   String? _cachedLanguage;
 
+  // Add this line near other state variables
+  Map<String, bool> _likedStories = {};
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _animController =
         AnimationController(vsync: this, duration: _storyDuration);
+
+    // Initialize liked state for all stories
+    for (var story in widget.stories) {
+      final storyId = story['id']?.toString() ?? '';
+      final List<dynamic> likedBy = story['likedBy'] ?? [];
+      _likedStories[storyId] =
+          likedBy.contains(FirebaseAuth.instance.currentUser?.uid);
+    }
 
     // Mark initial story as viewed - with null safety check
     if (_currentIndex < widget.stories.length) {
@@ -514,6 +525,15 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
+          // Add Info Button for story owner
+          if (isCurrentUserStory)
+            _buildIconButton(
+              icon: Icons.info_outline,
+              label: ref.watch(lang) == 'tr' ? 'Bilgi' : 'Info',
+              color: Colors.blue,
+              onTap: () => _showStoryInfo(widget.stories[_currentIndex]),
+            ),
+
           // Delete Button - only shown if it's the user's own story
           if (isCurrentUserStory)
             _buildIconButton(
@@ -531,15 +551,7 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
               icon: _isLiked() ? Icons.favorite : Icons.favorite_border,
               label: ref.watch(lang) == 'tr' ? 'Beğen' : 'Like',
               color: _isLiked() ? Colors.red : Colors.white,
-              onTap: () {
-                final storyId = widget.stories[_currentIndex]['id'].toString();
-                final bool isLiked = _isLiked();
-
-                if (widget.onLike != null) {
-                  widget.onLike!(storyId, !isLiked);
-                  setState(() {}); // Refresh to update like status
-                }
-              },
+              onTap: _handleLike, // Use the new method here
             ),
 
           // Reply Button - only if not current user's story
@@ -1085,9 +1097,131 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
 
   bool _isLiked() {
     final currentStory = widget.stories[_currentIndex];
-    final List<dynamic> likedBy = currentStory['likedBy'] ?? [];
-    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    return likedBy.contains(currentUserId);
+    final storyId = currentStory['id']?.toString() ?? '';
+    return _likedStories[storyId] ?? false;
+  }
+
+  // Add this new method
+  void _handleLike() {
+    final storyId = widget.stories[_currentIndex]['id']?.toString();
+    if (storyId == null) return;
+
+    setState(() {
+      _likedStories[storyId] = !(_likedStories[storyId] ?? false);
+    });
+
+    if (widget.onLike != null) {
+      widget.onLike!(storyId, _likedStories[storyId] ?? false);
+    }
+  }
+
+  // Add new method to show story info
+  void _showStoryInfo(Map<String, dynamic> story) async {
+    _pauseStory(); // Pause the story while showing info
+
+    final viewedBy = List<String>.from(story['viewedBy'] ?? []);
+    final likedBy = List<String>.from(story['likedBy'] ?? []);
+    final isDarkTheme = ref.watch(darkTheme);
+    final language = ref.watch(lang);
+
+    // Get user details for viewers and likers
+    final usersSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where(FieldPath.documentId,
+            whereIn: [...viewedBy, ...likedBy].toSet().toList())
+        .get();
+
+    if (!mounted) return;
+
+    final userDetails = Map.fromEntries(
+      usersSnapshot.docs.map((doc) => MapEntry(
+            doc.id,
+            {
+              'displayname': doc.data()['displayname'] ?? 'Unknown User',
+              'photoURL': doc.data()['photoURL'] ?? 'https://picsum.photos/100',
+            },
+          )),
+    );
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: isDarkTheme ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: DefaultTabController(
+          length: 2,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TabBar(
+                tabs: [
+                  Tab(
+                    text:
+                        '${language == 'tr' ? 'Görüntüleyenler' : 'Views'} (${viewedBy.length})',
+                  ),
+                  Tab(
+                    text:
+                        '${language == 'tr' ? 'Beğenenler' : 'Likes'} (${likedBy.length})',
+                  ),
+                ],
+                labelColor: isDarkTheme ? Colors.white : Colors.black,
+              ),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.3,
+                child: TabBarView(
+                  children: [
+                    _buildUserList(
+                        viewedBy, userDetails, isDarkTheme, language),
+                    _buildUserList(likedBy, userDetails, isDarkTheme, language),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).whenComplete(() => _resumeStory());
+  }
+
+  Widget _buildUserList(
+      List<String> userIds,
+      Map<String, Map<String, dynamic>> userDetails,
+      bool isDarkTheme,
+      String language) {
+    if (userIds.isEmpty) {
+      return Center(
+        child: Text(
+          language == 'tr' ? 'Henüz kimse yok' : 'No one yet',
+          style: TextStyle(
+            color: isDarkTheme ? Colors.white70 : Colors.black54,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: userIds.length,
+      itemBuilder: (context, index) {
+        final userId = userIds[index];
+        final user = userDetails[userId];
+        if (user == null) return const SizedBox.shrink();
+
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundImage: NetworkImage(user['photoURL'] as String),
+          ),
+          title: Text(
+            user['displayname'] as String,
+            style: TextStyle(
+              color: isDarkTheme ? Colors.white : Colors.black,
+            ),
+          ),
+        );
+      },
+    );
   }
 
   String _formatTimestamp(dynamic timestamp) {
