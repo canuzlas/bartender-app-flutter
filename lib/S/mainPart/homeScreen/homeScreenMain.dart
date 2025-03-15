@@ -120,63 +120,74 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain>
         child: sortedTweetsAsyncValue.when(
           data: (posts) {
             if (posts.isEmpty) {
-              return Center(
-                child: Container(
-                  padding: const EdgeInsets.all(30),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 70,
-                        color: darkThemeMain ? Colors.white38 : Colors.black26,
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        langMain == "tr"
-                            ? 'Kimseyi takip etmiyorsunuz.'
-                            : 'You are not following anyone.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color:
-                              darkThemeMain ? Colors.white70 : Colors.black54,
+              return Column(
+                children: [
+                  // Add story bar at the top even when no posts
+                  const StoryBarWidget(),
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(30),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.people_outline,
+                              size: 70,
+                              color: darkThemeMain
+                                  ? Colors.white38
+                                  : Colors.black26,
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              langMain == "tr"
+                                  ? 'Kimseyi takip etmiyorsunuz.'
+                                  : 'You are not following anyone.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: darkThemeMain
+                                    ? Colors.white70
+                                    : Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: () {
+                                showSearch(
+                                  context: context,
+                                  delegate: UserSearchDelegate(),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: darkThemeMain
+                                    ? Colors.orangeAccent
+                                    : Colors.deepOrange,
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                              ),
+                              child: Text(
+                                langMain == "tr"
+                                    ? 'Kişileri Keşfet'
+                                    : 'Discover People',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () {
-                          showSearch(
-                            context: context,
-                            delegate: UserSearchDelegate(),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: darkThemeMain
-                              ? Colors.orangeAccent
-                              : Colors.deepOrange,
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                        ),
-                        child: Text(
-                          langMain == "tr"
-                              ? 'Kişileri Keşfet'
-                              : 'Discover People',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               );
             }
             return RefreshIndicator(
@@ -186,22 +197,21 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain>
               onRefresh: () async {
                 ref.refresh(sortedTweetsProvider);
               },
-              child: Column(
+              child: ListView(
                 children: [
-                  // Add story bar at the top of the feed
+                  // Story bar at the top of the feed
                   const StoryBarWidget(),
 
-                  // Display posts in a scrollable list
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(top: 8, bottom: 20),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: posts.length,
-                      itemBuilder: (context, index) {
-                        final post = posts[index];
-                        return _buildPostCard(post);
-                      },
-                    ),
+                  // Posts list
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(top: 8, bottom: 20),
+                    itemCount: posts.length,
+                    itemBuilder: (context, index) {
+                      final post = posts[index];
+                      return _buildPostCard(post);
+                    },
                   ),
                 ],
               ),
@@ -300,11 +310,12 @@ class _HomeScreenMainState extends ConsumerState<HomeScreenMain>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 onPressed: () {
-                  // Add a quick animation effect when clicked
+                  // Immediately show dialog without waiting for animation
+                  _controller.showNewPostDialog(
+                      darkThemeMain, ref.watch(lang), context, ref);
+                  // Then handle animation
                   _animationController.stop();
                   _animationController.forward(from: 0.0).then((_) {
-                    _controller.showNewPostDialog(
-                        darkThemeMain, ref.watch(lang), context, ref);
                     _animationController.repeat(reverse: true);
                   });
                 },

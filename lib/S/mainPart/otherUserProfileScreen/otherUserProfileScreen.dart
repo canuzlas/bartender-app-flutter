@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bartender/S/mainPart/msgScreen/messagingPage.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/scheduler.dart';
 
 class OtherUserProfileScreen extends ConsumerWidget {
   final String userId;
@@ -14,6 +15,24 @@ class OtherUserProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Add cache clearing when page is popped
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      final modalRoute = ModalRoute.of(context);
+      if (modalRoute != null) {
+        modalRoute.addScopedWillPopCallback(() async {
+          // Clear the cached providers
+          ref.invalidate(userProvider);
+          ref.invalidate(userTweetsProvider);
+          ref.invalidate(tweetCountProvider);
+          ref.invalidate(mutualFollowersProvider);
+          ref.invalidate(isUserBlockedProvider);
+          ref.invalidate(isBlockedByTargetUserProvider);
+          ref.invalidate(followingProvider);
+          return true;
+        });
+      }
+    });
+
     final userAsyncValue = ref.watch(userProvider(userId));
     final tweetCountAsyncValue = ref.watch(tweetCountProvider(userId));
     final darkThemeMain = ref.watch(darkTheme.notifier).state;

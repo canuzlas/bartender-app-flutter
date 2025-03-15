@@ -136,309 +136,309 @@ class HomeScreenController {
   // Build new post dialog without StatefulBuilder, using provider state.
   void showNewPostDialog(bool darkThemeMain, String langMain, context, ref) {
     final textController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
-        backgroundColor: darkThemeMain ? const Color(0xFF252525) : Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    // Pre-build dialog content
+    final dialog = Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+      backgroundColor: darkThemeMain ? const Color(0xFF252525) : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  langMain == "tr" ? 'Yeni Gönderi' : 'New Post',
+                  style: TextStyle(
+                    color: darkThemeMain ? Colors.white : Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: darkThemeMain ? Colors.white70 : Colors.black54,
+                  ),
+                  onPressed: () {
+                    ref.read(newPostProvider.notifier).reset();
+                    Navigator.of(context).pop();
+                  },
+                )
+              ],
+            ),
+            const SizedBox(height: 16),
+            Consumer(builder: (context, ref, child) {
+              final newPostState = ref.watch(newPostProvider);
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    langMain == "tr" ? 'Yeni Gönderi' : 'New Post',
-                    style: TextStyle(
-                      color: darkThemeMain ? Colors.white : Colors.black,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    decoration: BoxDecoration(
+                      color: darkThemeMain
+                          ? const Color(0xFF303030)
+                          : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: darkThemeMain
+                            ? Colors.grey[700]!
+                            : Colors.grey[300]!,
+                      ),
+                    ),
+                    child: TextField(
+                      controller: textController,
+                      maxLines: 5,
+                      style: TextStyle(
+                        color: darkThemeMain ? Colors.white : Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: langMain == "tr"
+                            ? 'Neler oluyor?'
+                            : 'What\'s happening?',
+                        hintStyle: TextStyle(
+                          color: darkThemeMain
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
+                        border: InputBorder.none,
+                      ),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      color: darkThemeMain ? Colors.white70 : Colors.black54,
-                    ),
-                    onPressed: () {
-                      ref.read(newPostProvider.notifier).reset();
-                      Navigator.of(context).pop();
-                    },
-                  )
-                ],
-              ),
-              const SizedBox(height: 16),
-              Consumer(builder: (context, ref, child) {
-                final newPostState = ref.watch(newPostProvider);
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: darkThemeMain
-                            ? const Color(0xFF303030)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: darkThemeMain
-                              ? Colors.grey[700]!
-                              : Colors.grey[300]!,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: textController,
-                        maxLines: 5,
-                        style: TextStyle(
-                          color: darkThemeMain ? Colors.white : Colors.black,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: langMain == "tr"
-                              ? 'Neler oluyor?'
-                              : 'What\'s happening?',
-                          hintStyle: TextStyle(
+                  const SizedBox(height: 16),
+                  if (newPostState.selectedImage != null)
+                    GestureDetector(
+                      onTap: () => _showFullImage(context, ref),
+                      child: Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
                             color: darkThemeMain
-                                ? Colors.grey[400]
-                                : Colors.grey[600],
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                            width: 1,
                           ),
-                          contentPadding: const EdgeInsets.all(16),
-                          border: InputBorder.none,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(11),
+                          child: Image.file(
+                            newPostState.selectedImage!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    if (newPostState.selectedImage != null)
-                      GestureDetector(
-                        onTap: () => _showFullImage(context, ref),
-                        child: Container(
-                          height: 150,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              _showImageSourceActionSheet(context, ref),
+                          icon: const Icon(Icons.photo_library),
+                          label: Text(
+                            langMain == "tr" ? 'Fotoğraf Seç' : 'Add Photo',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor:
+                                darkThemeMain ? Colors.white : Colors.black87,
+                            side: BorderSide(
                               color: darkThemeMain
                                   ? Colors.grey[700]!
                                   : Colors.grey[300]!,
-                              width: 1,
                             ),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(11),
-                            child: Image.file(
-                              newPostState.selectedImage!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
                             ),
                           ),
                         ),
                       ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _showImageSourceActionSheet(context, ref),
-                            icon: const Icon(Icons.photo_library),
-                            label: Text(
-                              langMain == "tr" ? 'Fotoğraf Seç' : 'Add Photo',
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor:
-                                  darkThemeMain ? Colors.white : Colors.black87,
-                              side: BorderSide(
-                                color: darkThemeMain
-                                    ? Colors.grey[700]!
-                                    : Colors.grey[300]!,
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (textController.text.trim().isEmpty) {
-                                if (ref.read(newPostProvider).selectedImage !=
-                                    null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        langMain == "tr"
-                                            ? 'Sadece fotoğraf gönderemezsiniz'
-                                            : 'Cannot send photo only',
-                                      ),
-                                      behavior: SnackBarBehavior.floating,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (textController.text.trim().isEmpty) {
+                              if (ref.read(newPostProvider).selectedImage !=
+                                  null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      langMain == "tr"
+                                          ? 'Sadece fotoğraf gönderemezsiniz'
+                                          : 'Cannot send photo only',
                                     ),
-                                  );
-                                  return;
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      langMain == "tr"
+                                          ? 'Lütfen içerik giriniz'
+                                          : 'Please enter some text',
+                                    ),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+                            final notifier = ref.read(newPostProvider.notifier);
+                            notifier.setUploading(true);
+                            // Rest of your existing upload logic...
+                            String photoURL = '';
+                            if (newPostState.selectedImage != null) {
+                              try {
+                                final storageRef = FirebaseStorage.instance
+                                    .ref()
+                                    .child(
+                                        'tweet_photos/${DateTime.now().millisecondsSinceEpoch}.png');
+                                final uploadTask = storageRef
+                                    .putFile(newPostState.selectedImage!);
+                                final snapshot =
+                                    await uploadTask.whenComplete(() {});
+                                photoURL = await snapshot.ref.getDownloadURL();
+                                print('Image upload successful: $photoURL');
+                              } catch (e) {
+                                print('Error uploading image: $e');
+                              }
+                            }
+
+                            final userId =
+                                FirebaseAuth.instance.currentUser?.uid;
+
+                            if (userId != null) {
+                              try {
+                                // Fetch the current user data from Firestore users collection
+                                final userDoc = await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(userId)
+                                    .get();
+
+                                if (userDoc.exists) {
+                                  // Use user data from Firestore
+                                  final userData = userDoc.data()!;
+
+                                  FirebaseFirestore.instance
+                                      .collection('tweets')
+                                      .add({
+                                    'userId': userId,
+                                    'userName': userData['displayname'] ??
+                                        'Unknown User',
+                                    'userPhotoURL': userData['photoURL'] ?? '',
+                                    'message': textController.text,
+                                    'timestamp': Timestamp.now(),
+                                    'likedBy': [],
+                                    'photoURL': photoURL,
+                                  });
                                 } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        langMain == "tr"
-                                            ? 'Lütfen içerik giriniz'
-                                            : 'Please enter some text',
-                                      ),
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                  return;
+                                  // Fallback to FirebaseAuth data if user document doesn't exist
+                                  final userName = FirebaseAuth
+                                      .instance.currentUser?.displayName;
+                                  final userPhotoURL = FirebaseAuth
+                                      .instance.currentUser?.photoURL;
+
+                                  FirebaseFirestore.instance
+                                      .collection('tweets')
+                                      .add({
+                                    'userId': userId,
+                                    'userName': userName ?? 'Unknown User',
+                                    'userPhotoURL': userPhotoURL ?? '',
+                                    'message': textController.text,
+                                    'timestamp': Timestamp.now(),
+                                    'likedBy': [],
+                                    'photoURL': photoURL,
+                                  });
                                 }
+
+                                notifier.reset();
+                                Navigator.of(context).pop();
+                                ref.refresh(sortedTweetsProvider);
+                              } catch (e) {
+                                print('Error fetching user data: $e');
+                                // Handle the error, possibly show error message to user
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(langMain == "tr"
+                                        ? 'Gönderi yayınlanırken bir hata oluştu'
+                                        : 'Error publishing post'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
                               }
-                              final notifier =
-                                  ref.read(newPostProvider.notifier);
-                              notifier.setUploading(true);
-                              // Rest of your existing upload logic...
-                              String photoURL = '';
-                              if (newPostState.selectedImage != null) {
-                                try {
-                                  final storageRef = FirebaseStorage.instance
-                                      .ref()
-                                      .child(
-                                          'tweet_photos/${DateTime.now().millisecondsSinceEpoch}.png');
-                                  final uploadTask = storageRef
-                                      .putFile(newPostState.selectedImage!);
-                                  final snapshot =
-                                      await uploadTask.whenComplete(() {});
-                                  photoURL =
-                                      await snapshot.ref.getDownloadURL();
-                                  print('Image upload successful: $photoURL');
-                                } catch (e) {
-                                  print('Error uploading image: $e');
-                                }
-                              }
-
-                              final userId =
-                                  FirebaseAuth.instance.currentUser?.uid;
-
-                              if (userId != null) {
-                                try {
-                                  // Fetch the current user data from Firestore users collection
-                                  final userDoc = await FirebaseFirestore
-                                      .instance
-                                      .collection('users')
-                                      .doc(userId)
-                                      .get();
-
-                                  if (userDoc.exists) {
-                                    // Use user data from Firestore
-                                    final userData = userDoc.data()!;
-
-                                    FirebaseFirestore.instance
-                                        .collection('tweets')
-                                        .add({
-                                      'userId': userId,
-                                      'userName': userData['displayname'] ??
-                                          'Unknown User',
-                                      'userPhotoURL':
-                                          userData['photoURL'] ?? '',
-                                      'message': textController.text,
-                                      'timestamp': Timestamp.now(),
-                                      'likedBy': [],
-                                      'photoURL': photoURL,
-                                    });
-                                  } else {
-                                    // Fallback to FirebaseAuth data if user document doesn't exist
-                                    final userName = FirebaseAuth
-                                        .instance.currentUser?.displayName;
-                                    final userPhotoURL = FirebaseAuth
-                                        .instance.currentUser?.photoURL;
-
-                                    FirebaseFirestore.instance
-                                        .collection('tweets')
-                                        .add({
-                                      'userId': userId,
-                                      'userName': userName ?? 'Unknown User',
-                                      'userPhotoURL': userPhotoURL ?? '',
-                                      'message': textController.text,
-                                      'timestamp': Timestamp.now(),
-                                      'likedBy': [],
-                                      'photoURL': photoURL,
-                                    });
-                                  }
-
-                                  notifier.reset();
-                                  Navigator.of(context).pop();
-                                  ref.refresh(sortedTweetsProvider);
-                                } catch (e) {
-                                  print('Error fetching user data: $e');
-                                  // Handle the error, possibly show error message to user
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(langMain == "tr"
-                                          ? 'Gönderi yayınlanırken bir hata oluştu'
-                                          : 'Error publishing post'),
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                }
-                              }
-                              notifier.setUploading(false);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: darkThemeMain
-                                  ? Colors.orangeAccent
-                                  : Colors.deepOrange,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child: Text(
-                              langMain == "tr" ? 'Gönder' : 'Post',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                              ),
+                            }
+                            notifier.setUploading(false);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: darkThemeMain
+                                ? Colors.orangeAccent
+                                : Colors.deepOrange,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    if (newPostState.isUploading)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  darkThemeMain
-                                      ? Colors.orangeAccent
-                                      : Colors.deepOrange,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                langMain == "tr"
-                                    ? 'Yükleniyor...'
-                                    : 'Uploading...',
-                                style: TextStyle(
-                                  color: darkThemeMain
-                                      ? Colors.white70
-                                      : Colors.black54,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            langMain == "tr" ? 'Gönder' : 'Post',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
-                  ],
-                );
-              }),
-            ],
-          ),
+                    ],
+                  ),
+                  if (newPostState.isUploading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                darkThemeMain
+                                    ? Colors.orangeAccent
+                                    : Colors.deepOrange,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              langMain == "tr"
+                                  ? 'Yükleniyor...'
+                                  : 'Uploading...',
+                              style: TextStyle(
+                                color: darkThemeMain
+                                    ? Colors.white70
+                                    : Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
+          ],
         ),
       ),
+    );
+
+    // Show pre-built dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => dialog,
     );
   }
 
