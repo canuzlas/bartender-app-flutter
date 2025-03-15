@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bartender/mainSettings.dart';
 import 'package:bartender/S/mainPart/storyWidget/storyViewerWidget.dart';
+import 'package:bartender/S/mainPart/storyWidget/storyEditorScreen.dart'; // Add this import
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -328,111 +329,50 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
         return;
       }
 
-      setState(() {
-        _isUploading = true;
-      });
-
-      // Upload to Firebase Storage
+      // Create File from XFile
       final File imageFile = File(pickedFile.path);
-      final String fileName = const Uuid().v4();
-      final Reference storageRef = FirebaseStorage.instance
-          .ref()
-          .child('stories')
-          .child(_auth.currentUser!.uid)
-          .child('$fileName.jpg');
 
-      // Set metadata to further compress the image with JPEG format
-      final SettableMetadata metadata = SettableMetadata(
-        contentType: 'image/jpeg',
-        customMetadata: {'picked-file-path': pickedFile.path},
-      );
+      // Open the editor instead of directly uploading
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StoryEditorScreen(
+              imageFile: imageFile,
+              isCamera: isCamera,
+              onComplete: (success) {
+                if (success) {
+                  // Update state to show the new story
+                  ref
+                      .read(refreshingProvider.notifier)
+                      .update((state) => !state);
 
-      final UploadTask uploadTask = storageRef.putFile(imageFile, metadata);
-
-      // Listen for possible errors during upload
-      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        if (snapshot.state == TaskState.error) {
-          if (mounted) {
-            setState(() {
-              _isUploading = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(ref.watch(lang) == 'tr'
-                  ? 'Yükleme başarısız oldu: Dosya boyutu çok büyük'
-                  : 'Upload failed: File size too large'),
-              backgroundColor: Colors.red,
-            ));
-          }
-        }
-      }, onError: (error) {
-        if (mounted) {
-          setState(() {
-            _isUploading = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(ref.watch(lang) == 'tr'
-                ? 'Yükleme hatası: Dosya boyutu çok büyük olabilir'
-                : 'Upload error: File size might be too large'),
-            backgroundColor: Colors.red,
-          ));
-        }
-      });
-
-      final TaskSnapshot taskSnapshot = await uploadTask;
-      final String downloadUrl = await taskSnapshot.ref.getDownloadURL();
-
-      // Create story document in Firestore
-      final now = Timestamp.now();
-      final expiresAt =
-          Timestamp.fromDate(DateTime.now().add(const Duration(hours: 24)));
-
-      // Use a trimmed description to prevent document size issues
-      await FirebaseFirestore.instance.collection('stories').add({
-        'userId': _auth.currentUser!.uid,
-        'userPhotoURL': _auth.currentUser!.photoURL,
-        'userName': _auth.currentUser!.displayName,
-        'media': downloadUrl,
-        'description': '', // Empty description to save space
-        'timestamp': now,
-        'expiresAt': expiresAt,
-        'viewedBy': [],
-        'likedBy': [],
-      });
-
-      if (!mounted) {
-        return; // Check if widget is still mounted before continuing
-      }
-
-      setState(() {
-        _isUploading = false;
-      });
-
-      // Update state to show the new story
-      ref.read(refreshingProvider.notifier).update((state) => !state);
-
-      // Show success message with View button
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              ref.watch(lang) == 'tr' ? 'Hikaye paylaşıldı' : 'Story shared'),
-          backgroundColor: Colors.green,
-          action: SnackBarAction(
-            label: ref.watch(lang) == 'tr' ? 'Görüntüle' : 'View',
-            textColor: Colors.white,
-            onPressed: () {
-              _viewCurrentUserStories();
-            },
+                  // Show success message with View button
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ref.watch(lang) == 'tr'
+                          ? 'Hikaye paylaşıldı'
+                          : 'Story shared'),
+                      backgroundColor: Colors.green,
+                      action: SnackBarAction(
+                        label: ref.watch(lang) == 'tr' ? 'Görüntüle' : 'View',
+                        textColor: Colors.white,
+                        onPressed: () {
+                          _viewCurrentUserStories();
+                        },
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
       if (!mounted) {
         return; // Check if widget is still mounted before continuing
       }
-
-      setState(() {
-        _isUploading = false;
-      });
 
       // Check for specific Firebase error messages
       String errorMessage = e.toString();
@@ -585,7 +525,6 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
   void _viewUserStories(
       List<QueryDocumentSnapshot> stories, String userName, String userImage) {
     List<Map<String, dynamic>> storyItems = [];
-
     for (var story in stories) {
       Map<String, dynamic> storyData = story.data() as Map<String, dynamic>;
       storyItems.add({
@@ -646,7 +585,6 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
 
         List<dynamic> likedBy =
             List<dynamic>.from(storyDoc.data()?['likedBy'] ?? []);
-
         if (isLiked && !likedBy.contains(currentUserId)) {
           likedBy.add(currentUserId);
         } else if (!isLiked && likedBy.contains(currentUserId)) {
@@ -776,7 +714,6 @@ class _StoryBarWidgetState extends ConsumerState<StoryBarWidget> {
       if (!mounted) return;
 
       print('Error sending message: ${e.toString()}');
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ref.watch(lang) == 'tr'

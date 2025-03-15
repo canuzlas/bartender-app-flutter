@@ -58,6 +58,7 @@ dependencies:
   http: ^0.13.5  # Add this line for HTTP requests to GIPHY API
   firebase_messaging: ^15.2.4
   flutter_local_notifications: 18.0.0
+  image: ^4.5.3
 
 
 
