@@ -790,6 +790,18 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
                               ),
                             ),
                           ),
+                          // Saved chats button
+                          IconButton(
+                            icon:
+                                const Icon(Icons.history, color: Colors.white),
+                            tooltip: langMain == "tr"
+                                ? "Kaydedilmiş Sohbetler"
+                                : "Saved Chats",
+                            onPressed: () {
+                              // Show saved chats dialog
+                              _showSavedChatsDialog(langMain, darkThemeMain);
+                            },
+                          ),
                           // Save chat button
                           IconButton(
                             icon: const Icon(Icons.bookmark_border,
@@ -975,6 +987,275 @@ class _AiChatScreenMainState extends ConsumerState<AiChatScreenMain> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  // Show saved chats dialog
+  void _showSavedChatsDialog(String langMain, bool darkThemeMain) async {
+    // Refresh the saved chats list before showing the dialog
+    await ref.read(savedChatsProvider.notifier).loadSavedChats();
+
+    // Now get the refreshed list
+    final savedChats = ref.watch(savedChatsProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: darkThemeMain ? const Color(0xFF333333) : Colors.white,
+        title: Text(
+          langMain == "tr" ? 'Kaydedilmiş Sohbetler' : 'Saved Chats',
+          style: TextStyle(
+            color: darkThemeMain ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: MediaQuery.of(context).size.height *
+              0.6, // Add a height constraint
+          child: savedChats.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Text(
+                      langMain == "tr"
+                          ? 'Henüz kaydedilmiş sohbet yok'
+                          : 'No saved chats yet',
+                      style: TextStyle(
+                        color:
+                            darkThemeMain ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: savedChats.length,
+                  itemBuilder: (context, index) {
+                    final chat = savedChats[index];
+                    return ListTile(
+                      title: Text(
+                        chat.title,
+                        style: TextStyle(
+                          color: darkThemeMain ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            chat.previewText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: darkThemeMain
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatDate(chat.timestamp, langMain),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: darkThemeMain
+                                  ? Colors.grey[500]
+                                  : Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(
+                          Icons.delete_outline,
+                          color: darkThemeMain ? Colors.red[300] : Colors.red,
+                        ),
+                        onPressed: () {
+                          // Delete saved chat
+                          _confirmDeleteSavedChat(
+                              chat.id, langMain, darkThemeMain);
+                        },
+                      ),
+                      onTap: () {
+                        // Load saved chat
+                        _loadSavedChat(chat.threadId, langMain);
+                        Navigator.of(context).pop();
+                      },
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            child: Text(
+              langMain == "tr" ? 'Kapat' : 'Close',
+              style: TextStyle(
+                color: darkThemeMain ? Colors.grey[400] : Colors.grey[700],
+              ),
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Format date for display
+  String _formatDate(DateTime date, String langMain) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    // Today
+    if (difference.inDays == 0) {
+      final hour = date.hour.toString().padLeft(2, '0');
+      final minute = date.minute.toString().padLeft(2, '0');
+      return langMain == "tr"
+          ? "Bugün $hour:$minute"
+          : "Today at $hour:$minute";
+    }
+    // Yesterday
+    else if (difference.inDays == 1) {
+      final hour = date.hour.toString().padLeft(2, '0');
+      final minute = date.minute.toString().padLeft(2, '0');
+      return langMain == "tr"
+          ? "Dün $hour:$minute"
+          : "Yesterday at $hour:$minute";
+    }
+    // Within last week
+    else if (difference.inDays < 7) {
+      final List<String> daysEn = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday'
+      ];
+      final List<String> daysTr = [
+        'Pazartesi',
+        'Salı',
+        'Çarşamba',
+        'Perşembe',
+        'Cuma',
+        'Cumartesi',
+        'Pazar'
+      ];
+
+      final day = langMain == "tr"
+          ? daysTr[date.weekday - 1]
+          : daysEn[date.weekday - 1];
+      final hour = date.hour.toString().padLeft(2, '0');
+      final minute = date.minute.toString().padLeft(2, '0');
+      return "$day $hour:$minute";
+    }
+    // Older
+    else {
+      final day = date.day.toString().padLeft(2, '0');
+      final month = date.month.toString().padLeft(2, '0');
+      final hour = date.hour.toString().padLeft(2, '0');
+      final minute = date.minute.toString().padLeft(2, '0');
+      return "$day/$month/${date.year} $hour:$minute";
+    }
+  }
+
+  // Confirm delete saved chat
+  void _confirmDeleteSavedChat(
+      String chatId, String langMain, bool darkThemeMain) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: darkThemeMain ? const Color(0xFF333333) : Colors.white,
+        title: Text(
+          langMain == "tr" ? 'Sohbeti Sil' : 'Delete Chat',
+          style: TextStyle(
+            color: darkThemeMain ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: Text(
+          langMain == "tr"
+              ? 'Bu sohbet kalıcı olarak silinecek. Emin misiniz?'
+              : 'This chat will be permanently deleted. Are you sure?',
+          style: TextStyle(
+            color: darkThemeMain ? Colors.white : Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text(
+              langMain == "tr" ? 'İptal' : 'Cancel',
+              style: TextStyle(
+                color: darkThemeMain ? Colors.grey[400] : Colors.grey[700],
+              ),
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: Text(
+              langMain == "tr" ? 'Sil' : 'Delete',
+              style: TextStyle(
+                color: Colors.red,
+              ),
+            ),
+            onPressed: () {
+              ref.read(savedChatsProvider.notifier).deleteChat(chatId);
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Load saved chat
+  void _loadSavedChat(String threadId, String langMain) {
+    if (threadId.isEmpty) {
+      print('Attempted to load a chat with empty thread ID');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            langMain == "tr"
+                ? 'Sohbet yüklenemedi: Geçersiz kimlik'
+                : 'Failed to load chat: Invalid ID',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red[700],
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    print('Loading chat with thread ID: $threadId');
+
+    // First clear current chat
+    ref.read(chatProvider.notifier).deleteChat();
+
+    // Then set the thread ID and load messages
+    ref.read(assistantThreadProvider.notifier).state = threadId;
+
+    // Show loading message
+    final loadingMessage = langMain == "tr"
+        ? "Kaydedilmiş sohbet yükleniyor..."
+        : "Loading saved chat...";
+
+    // Load the chat with a slight delay to ensure state is updated properly
+    Future.delayed(Duration.zero, () {
+      ref.read(chatProvider.notifier).loadSavedChat(threadId, loadingMessage);
+    });
+
+    // Give feedback to the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          langMain == "tr" ? 'Sohbet yükleniyor...' : 'Loading chat...',
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.green[700],
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
       ),
     );
   }

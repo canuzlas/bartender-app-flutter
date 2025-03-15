@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bartender/S/mainPart/aiChatScreen/aiChatScreenModel.dart';
+import 'package:bartender/mainSettings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -48,13 +49,19 @@ final savedChatsProvider =
 
 class SavedChatsNotifier extends StateNotifier<List<SavedChat>> {
   SavedChatsNotifier() : super([]) {
-    _loadSavedChats();
+    _loadSavedChats(); // Initial load
+  }
+
+  // Load saved chats - made public so it can be refreshed
+  Future<void> loadSavedChats() async {
+    await _loadSavedChats();
   }
 
   Future<void> _loadSavedChats() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
+        print('Loading saved chats for user: ${user.uid}');
         final snapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -62,6 +69,7 @@ class SavedChatsNotifier extends StateNotifier<List<SavedChat>> {
             .orderBy('timestamp', descending: true)
             .get();
 
+        print('Loaded ${snapshot.docs.length} saved chats');
         final chats = snapshot.docs
             .map((doc) => SavedChat(
                   id: doc.id,
@@ -231,6 +239,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
         'isUser': true,
         'timestamp': timestamp,
         'messageId': messageId,
+        'threadId': _threadId, // Add thread ID to messages
       });
 
       state = [
@@ -332,6 +341,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
         'timestamp': Timestamp.fromDate(timestamp),
         'messageId': messageId,
         'imageUrl': imageUrl,
+        'threadId': _threadId, // Add thread ID to messages
       });
 
       state = [
@@ -622,6 +632,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
         'isUser': false,
         'timestamp': Timestamp.fromDate(timestamp),
         'messageId': messageId,
+        'threadId': _threadId, // Add thread ID to messages
       });
     }
   }
@@ -642,32 +653,61 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 
   Future<void> _loadMessagesFromFirestore() async {
+    if (_threadId == null) {
+      print('_loadMessagesFromFirestore: threadId is null, skipping load');
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('aichat')
-          .where('uid', isEqualTo: user.uid)
-          .orderBy('timestamp')
-          .get();
-      final messages = querySnapshot.docs.map((doc) {
-        // Get data from document as a Map
-        final data = doc.data();
+      try {
+        print('Loading messages for thread: $_threadId');
 
-        return ChatMessage(
-          data['text'],
-          data['isUser'],
-          messageId: data['messageId'],
-          timestamp: (data['timestamp'] as Timestamp).toDate(),
-          // Safely access the imageUrl field, which may not exist
-          imageUrl: data.containsKey('imageUrl') ? data['imageUrl'] : null,
-          isError: false,
-          // Safely access the reactions field, which may not exist
-          reactions: data.containsKey('reactions')
-              ? Map<String, bool>.from(data['reactions'])
-              : null,
-        );
-      }).toList();
-      state = messages;
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('aichat')
+            .where('uid', isEqualTo: user.uid)
+            .orderBy('timestamp')
+            .get();
+
+        // Filter by thread ID in application code for reliability
+        final filteredDocs = querySnapshot.docs.where((doc) {
+          final data = doc.data();
+          return data.containsKey('threadId') && data['threadId'] == _threadId;
+        }).toList();
+
+        print('Found ${filteredDocs.length} messages for thread: $_threadId');
+
+        if (filteredDocs.isEmpty) {
+          return; // No messages to load
+        }
+
+        final messages = filteredDocs.map((doc) {
+          // Get data from document as a Map
+          final data = doc.data();
+
+          return ChatMessage(
+            data['text'],
+            data['isUser'],
+            messageId: data['messageId'],
+            timestamp: (data['timestamp'] as Timestamp).toDate(),
+            // Safely access the imageUrl field, which may not exist
+            imageUrl: data.containsKey('imageUrl') ? data['imageUrl'] : null,
+            isError: false,
+            // Safely access the reactions field, which may not exist
+            reactions: data.containsKey('reactions')
+                ? Map<String, bool>.from(data['reactions'])
+                : null,
+          );
+        }).toList();
+
+        // Sort by timestamp
+        messages.sort((a, b) => (a.timestamp?.millisecondsSinceEpoch ?? 0)
+            .compareTo(b.timestamp?.millisecondsSinceEpoch ?? 0));
+
+        state = messages;
+      } catch (e) {
+        print('Error loading messages from Firestore: $e');
+      }
     }
   }
 
@@ -678,7 +718,10 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('aichat')
           .where('uid', isEqualTo: user.uid)
+          .where('threadId',
+              isEqualTo: _threadId) // Only delete current thread messages
           .get();
+
       for (var doc in querySnapshot.docs) {
         batch.delete(doc.reference);
       }
@@ -779,6 +822,146 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       state = [ChatMessage(successMessage, false)];
     } catch (e) {
       print('Error saving chat: $e');
+    }
+  }
+
+  // Load a saved chat by thread ID
+  Future<void> loadSavedChat(String threadId, String loadingMessage) async {
+    try {
+      // First clear the current state and show loading
+      state = [ChatMessage(loadingMessage, false)];
+
+      print('Loading saved chat with thread ID: $threadId');
+
+      // Set the thread ID
+      _threadId = threadId;
+      _ref.read(assistantThreadProvider.notifier).state = threadId;
+
+      // Save the thread ID to Firestore
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('settings')
+            .doc('assistantThread')
+            .set({'threadId': threadId});
+
+        print('Updated thread ID in Firestore to: $threadId');
+
+        // Fetch messages for this thread from Firestore
+        try {
+          // Query directly with threadId filter to improve performance
+          final querySnapshot = await FirebaseFirestore.instance
+              .collection('aichat')
+              .where('uid', isEqualTo: user.uid)
+              .where('threadId',
+                  isEqualTo: threadId) // Filter by threadId in the query
+              .orderBy('timestamp')
+              .get();
+
+          print(
+              'Found ${querySnapshot.docs.length} messages with thread ID: $threadId');
+
+          if (querySnapshot.docs.isEmpty) {
+            // If the query found no messages, try a more flexible approach
+            print(
+                'No messages found with direct query, trying backup approach');
+
+            final allMessagesSnapshot = await FirebaseFirestore.instance
+                .collection('aichat')
+                .where('uid', isEqualTo: user.uid)
+                .orderBy('timestamp')
+                .get();
+
+            print(
+                'Found ${allMessagesSnapshot.docs.length} total messages for user');
+
+            // Filter manually in case threadId field is missing or has different format
+            final filteredDocs = allMessagesSnapshot.docs.where((doc) {
+              final data = doc.data();
+              // More flexible check - looking for any field that might contain threadId
+              return (data.containsKey('threadId') &&
+                      data['threadId'] == threadId) ||
+                  (data.toString().contains(threadId));
+            }).toList();
+
+            print(
+                'Found ${filteredDocs.length} messages after manual filtering');
+
+            if (filteredDocs.isEmpty) {
+              // Only if both approaches find no messages, show empty message
+              final currentLang = langMain;
+              state = [
+                ChatMessage(
+                    currentLang == "tr"
+                        ? "Sohbet kaydı boş görünüyor. Yeni bir sohbet başlatın."
+                        : "This chat history appears to be empty. Start a new conversation.",
+                    false)
+              ];
+              return;
+            }
+
+            // Process messages from backup approach
+            final messages = _processMessagesFromDocs(filteredDocs);
+            state = messages;
+            print('Loaded ${messages.length} messages using backup approach');
+            return;
+          }
+
+          // Process messages from direct query approach
+          final messages = _processMessagesFromDocs(querySnapshot.docs);
+
+          // Update state with fetched messages
+          state = messages;
+          print('Loaded ${messages.length} messages for thread: $threadId');
+        } catch (e) {
+          print('Error fetching messages: $e');
+          state = [
+            ChatMessage("Error loading messages: $e", false, isError: true)
+          ];
+        }
+      }
+    } catch (e) {
+      print('Error in loadSavedChat: $e');
+      state = [
+        ChatMessage("Error loading saved chat: $e", false, isError: true)
+      ];
+    }
+  }
+
+  // Helper method to process message documents into ChatMessage objects
+  List<ChatMessage> _processMessagesFromDocs(
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    final messages = docs.map((doc) {
+      final data = doc.data();
+
+      return ChatMessage(
+        data['text'],
+        data['isUser'],
+        messageId: data['messageId'],
+        timestamp: (data['timestamp'] as Timestamp).toDate(),
+        imageUrl: data.containsKey('imageUrl') ? data['imageUrl'] : null,
+        isError: false,
+        reactions: data.containsKey('reactions')
+            ? Map<String, bool>.from(data['reactions'])
+            : null,
+      );
+    }).toList();
+
+    // Sort messages by timestamp to ensure correct order
+    messages.sort((a, b) => (a.timestamp?.millisecondsSinceEpoch ?? 0)
+        .compareTo(b.timestamp?.millisecondsSinceEpoch ?? 0));
+
+    return messages;
+  }
+
+  // Helper method to determine language
+  String get langMain {
+    try {
+      return _ref.read(lang);
+    } catch (e) {
+      return "en"; // Default to English if provider not available
     }
   }
 }
