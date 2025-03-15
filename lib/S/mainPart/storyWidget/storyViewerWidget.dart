@@ -820,6 +820,17 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
           ? 'Hikayeleriniz yükleniyor...'
           : 'Loading your stories...');
 
+      // Get current user's information from Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .get();
+
+      final userData = userDoc.data();
+      final String userName = userData?['displayname'] ?? 'Unknown';
+      final String userImage =
+          userData?['photoURL'] ?? 'https://picsum.photos/100';
+
       // Fetch current user's active stories
       final storiesQuery = await FirebaseFirestore.instance
           .collection('stories')
@@ -837,25 +848,6 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
               isError: true);
         }
         return;
-      }
-
-      // Get current user's information
-      final userSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserId)
-          .get();
-
-      String userName = FirebaseAuth.instance.currentUser?.displayName ?? 'You';
-      String userImage = FirebaseAuth.instance.currentUser?.photoURL ??
-          'https://picsum.photos/100';
-
-      // Update with user info from Firestore if available
-      if (userSnapshot.exists) {
-        final userData = userSnapshot.data();
-        if (userData != null) {
-          userName = userData['displayname'] ?? userName;
-          userImage = userData['photoURL'] ?? userImage;
-        }
       }
 
       // Convert query results to story items
@@ -1124,24 +1116,40 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
     final isDarkTheme = ref.watch(darkTheme);
     final language = ref.watch(lang);
 
-    // Get user details for viewers and likers
-    final usersSnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where(FieldPath.documentId,
-            whereIn: [...viewedBy, ...likedBy].toSet().toList())
-        .get();
+    // Create a map for user details
+    Map<String, Map<String, dynamic>> userDetails = {};
+
+    // Check if there are any users to query
+    final userIds = [...viewedBy, ...likedBy].toSet().toList();
+
+    // Only query Firestore if there are users to query
+    if (userIds.isNotEmpty) {
+      try {
+        // Get user details for viewers and likers
+        final usersSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: userIds)
+            .get();
+
+        if (!mounted) return;
+
+        userDetails = Map.fromEntries(
+          usersSnapshot.docs.map((doc) => MapEntry(
+                doc.id,
+                {
+                  'displayname': doc.data()['displayname'] ?? 'Unknown User',
+                  'photoURL':
+                      doc.data()['photoURL'] ?? 'https://picsum.photos/100',
+                },
+              )),
+        );
+      } catch (e) {
+        print("Error fetching user details: $e");
+        // Continue with empty userDetails if there's an error
+      }
+    }
 
     if (!mounted) return;
-
-    final userDetails = Map.fromEntries(
-      usersSnapshot.docs.map((doc) => MapEntry(
-            doc.id,
-            {
-              'displayname': doc.data()['displayname'] ?? 'Unknown User',
-              'photoURL': doc.data()['photoURL'] ?? 'https://picsum.photos/100',
-            },
-          )),
-    );
 
     showModalBottomSheet(
       context: context,
@@ -1169,15 +1177,50 @@ class _StoryViewerWidgetState extends ConsumerState<StoryViewerWidget>
                 ],
                 labelColor: isDarkTheme ? Colors.white : Colors.black,
               ),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.3,
-                child: TabBarView(
-                  children: [
-                    _buildUserList(
-                        viewedBy, userDetails, isDarkTheme, language),
-                    _buildUserList(likedBy, userDetails, isDarkTheme, language),
-                  ],
-                ),
+              FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(FirebaseAuth.instance.currentUser?.uid)
+                    .get(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox(
+                      height: 100,
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  final userData =
+                      snapshot.data?.data() as Map<String, dynamic>?;
+                  final isBlocked =
+                      userData?['blockedUsers'] as List<dynamic>? ?? [];
+
+                  return SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.3,
+                    child: TabBarView(
+                      children: [
+                        _buildUserList(
+                          viewedBy
+                              .where((id) => !isBlocked.contains(id))
+                              .toList(),
+                          userDetails,
+                          isDarkTheme,
+                          language,
+                        ),
+                        _buildUserList(
+                          likedBy
+                              .where((id) => !isBlocked.contains(id))
+                              .toList(),
+                          userDetails,
+                          isDarkTheme,
+                          language,
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ),
