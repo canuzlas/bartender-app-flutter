@@ -20,6 +20,7 @@ final sortedTweetsProvider = StreamProvider.autoDispose<
     final snapshot = await FirebaseFirestore.instance
         .collection('tweets')
         .where('userId', whereIn: following)
+        .where('archived', isEqualTo: false)
         .orderBy('timestamp', descending: true)
         .get();
     return snapshot.docs;

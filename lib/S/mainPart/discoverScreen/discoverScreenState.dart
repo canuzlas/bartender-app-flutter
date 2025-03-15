@@ -5,6 +5,7 @@ import 'package:riverpod/riverpod.dart';
 final tweetProvider = StreamProvider<List<Tweet>>((ref) {
   return FirebaseFirestore.instance
       .collection('tweets')
+      .where('archived', isEqualTo: false) // Filter out archived tweets
       .orderBy('timestamp', descending: true) // Sort by timestamp descending
       .snapshots()
       .map((snapshot) {

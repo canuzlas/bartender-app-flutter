@@ -383,34 +383,22 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                     ),
                   ),
                 ),
-                error: (error, stack) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
+                error: (error, stack) {
+                  print(error);
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.error_outline,
-                          size: 60,
-                          color: darkThemeMain
-                              ? Colors.redAccent
-                              : Colors.red[300],
+                          size: 70,
+                          color: darkThemeMain ? Colors.grey[600] : Colors.grey,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Error loading content',
+                          'Error loading posts',
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color:
-                                darkThemeMain ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          error.toString(),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
                             color: darkThemeMain
                                 ? Colors.grey[500]
                                 : Colors.grey[600],
@@ -418,8 +406,8 @@ class _DiscoveryScreenMainState extends ConsumerState<DiscoveryScreenMain> {
                         ),
                       ],
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           ],
