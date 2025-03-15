@@ -51,6 +51,16 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
   Color _textBackgroundColor = Colors.black.withOpacity(0.5);
   double _textRotation = 0.0;
 
+  // New features
+  double _uploadProgress = 0.0;
+  bool _showWatermark = false;
+  String _watermarkText = '';
+  int _imageQuality = 85; // Default image quality (0-100)
+  bool _showHashtagMention = false;
+  TextEditingController _hashtagController = TextEditingController();
+  List<String> _hashtags = [];
+  List<String> _mentions = [];
+
   // Filter options
   List<FilterOption> filters = [
     FilterOption(name: 'Normal', matrix: null),
@@ -185,11 +195,18 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
   void initState() {
     super.initState();
     selectedFilter = filters[0]; // Start with normal filter
+
+    // Set default watermark to username if available
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.displayName != null) {
+      _watermarkText = '@${user!.displayName}';
+    }
   }
 
   @override
   void dispose() {
     _textController.dispose();
+    _hashtagController.dispose();
     super.dispose();
   }
 
@@ -212,6 +229,7 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
+          // Text button
           IconButton(
             icon: Icon(
               Icons.text_fields,
@@ -220,11 +238,32 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
             onPressed: () {
               setState(() {
                 _isTextMode = !_isTextMode;
+                _showHashtagMention = false;
                 if (!_isTextMode) {
                   _inputText = _textController.text;
                   _textController.clear();
                 }
               });
+            },
+          ),
+          // New feature: Show hashtag menu
+          IconButton(
+            icon: Icon(
+              Icons.tag,
+              color: _showHashtagMention ? primaryColor : Colors.white,
+            ),
+            onPressed: () {
+              setState(() {
+                _showHashtagMention = !_showHashtagMention;
+                _isTextMode = false;
+              });
+            },
+          ),
+          // Quality settings
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {
+              _showQualitySettings(context, primaryColor, language);
             },
           ),
           IconButton(
@@ -331,323 +370,626 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
                             ),
                           ),
                         ),
+
+                      // Watermark
+                      if (_showWatermark && _watermarkText.isNotEmpty)
+                        Positioned(
+                          right: 15,
+                          bottom: 15,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              _watermarkText,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 14,
+                                fontWeight: FontWeight.normal,
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 3.0,
+                                    color: Colors.black.withOpacity(0.8),
+                                    offset: const Offset(1.0, 1.0),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // Display hashtags and mentions
+                      if (_hashtags.isNotEmpty || _mentions.isNotEmpty)
+                        Positioned(
+                          left: 15,
+                          bottom: 15,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.7,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_hashtags.isNotEmpty) ...[
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: _hashtags
+                                        .map((tag) => Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue
+                                                    .withOpacity(0.3),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Colors.blue
+                                                      .withOpacity(0.5),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                '#$tag',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ))
+                                        .toList(),
+                                  ),
+                                  if (_mentions.isNotEmpty)
+                                    const SizedBox(height: 8),
+                                ],
+                                if (_mentions.isNotEmpty)
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: _mentions
+                                        .map((mention) => Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.purple
+                                                    .withOpacity(0.3),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Colors.purple
+                                                      .withOpacity(0.5),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.alternate_email,
+                                                    size: 14,
+                                                    color: Colors.white70,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    mention,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ))
+                                        .toList(),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
 
                 // Text input overlay with new options
                 if (_isTextMode)
-                  Container(
-                    color: Colors.black.withOpacity(0.7),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        TextField(
-                          controller: _textController,
-                          style: TextStyle(
-                            color: _textColor,
-                            fontSize: _textSize,
-                            fontWeight:
-                                _isBold ? FontWeight.bold : FontWeight.normal,
-                            fontStyle:
-                                _isItalic ? FontStyle.italic : FontStyle.normal,
-                          ),
-                          textAlign: _textAlignment,
-                          maxLines: 3,
-                          decoration: InputDecoration(
-                            hintText: language == 'tr'
-                                ? 'Metin girin...'
-                                : 'Enter text...',
-                            hintStyle:
-                                TextStyle(color: _textColor.withOpacity(0.7)),
-                            border: InputBorder.none,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // Text size slider
-                        Row(
+                  GestureDetector(
+                    onTap: () {
+                      // Close the text input when tapping outside
+                      setState(() {
+                        _inputText = _textController.text;
+                        _isTextMode = false;
+                      });
+                    },
+                    child: Container(
+                      color: Colors.black.withOpacity(0.7),
+                      padding: const EdgeInsets.all(16.0),
+                      child: GestureDetector(
+                        // Prevent taps inside from closing
+                        onTap: () {},
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.format_size, color: Colors.white),
-                            Expanded(
-                              child: Slider(
-                                value: _textSize,
-                                min: 12.0,
-                                max: 48.0,
-                                activeColor: primaryColor,
-                                inactiveColor: Colors.grey,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _textSize = value;
-                                  });
-                                },
+                            TextField(
+                              controller: _textController,
+                              style: TextStyle(
+                                color: _textColor,
+                                fontSize: _textSize,
+                                fontWeight: _isBold
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontStyle: _isItalic
+                                    ? FontStyle.italic
+                                    : FontStyle.normal,
+                              ),
+                              textAlign: _textAlignment,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                hintText: language == 'tr'
+                                    ? 'Metin girin...'
+                                    : 'Enter text...',
+                                hintStyle: TextStyle(
+                                    color: _textColor.withOpacity(0.7)),
+                                border: InputBorder.none,
                               ),
                             ),
-                          ],
-                        ),
-
-                        // Text formatting buttons with new options
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                Icons.format_bold,
-                                color: _isBold ? primaryColor : Colors.white,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isBold = !_isBold;
-                                });
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                Icons.format_italic,
-                                color: _isItalic ? primaryColor : Colors.white,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isItalic = !_isItalic;
-                                });
-                              },
-                            ),
-                            // Text alignment button
-                            IconButton(
-                              icon: Icon(
-                                _textAlignment == TextAlign.left
-                                    ? Icons.format_align_left
-                                    : _textAlignment == TextAlign.center
-                                        ? Icons.format_align_center
-                                        : Icons.format_align_right,
-                                color: Colors.white,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  if (_textAlignment == TextAlign.left) {
-                                    _textAlignment = TextAlign.center;
-                                  } else if (_textAlignment ==
-                                      TextAlign.center) {
-                                    _textAlignment = TextAlign.right;
-                                  } else {
-                                    _textAlignment = TextAlign.left;
-                                  }
-                                });
-                              },
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _inputText = _textController.text;
-                                  _isTextMode = false;
-                                  // Center the text initially
-                                  _textX =
-                                      MediaQuery.of(context).size.width / 2 -
-                                          50;
-                                  _textY =
-                                      MediaQuery.of(context).size.height / 4;
-                                });
-                              },
-                              child: Text(
-                                language == 'tr' ? 'Uygula' : 'Apply',
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Color palette
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 40,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _colorPalette.length,
-                            itemBuilder: (context, index) {
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _textColor = _colorPalette[index];
-                                  });
-                                },
-                                child: Container(
-                                  margin:
-                                      const EdgeInsets.symmetric(horizontal: 4),
-                                  width: 30,
-                                  height: 30,
-                                  decoration: BoxDecoration(
-                                    color: _colorPalette[index],
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: _textColor == _colorPalette[index]
-                                          ? primaryColor
-                                          : Colors.white,
-                                      width: _textColor == _colorPalette[index]
-                                          ? 2
-                                          : 1,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-
-                        // New advanced text formatting options
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            // Text shadow toggle
-                            Column(
+                            const SizedBox(height: 20),
+                            // Text size slider
+                            Row(
                               children: [
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.blur_on,
-                                    color: _hasTextShadow
-                                        ? primaryColor
-                                        : Colors.white,
+                                const Icon(Icons.format_size,
+                                    color: Colors.white),
+                                Expanded(
+                                  child: Slider(
+                                    value: _textSize,
+                                    min: 12.0,
+                                    max: 48.0,
+                                    activeColor: primaryColor,
+                                    inactiveColor: Colors.grey,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _textSize = value;
+                                      });
+                                    },
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _hasTextShadow = !_hasTextShadow;
-                                    });
-                                  },
-                                ),
-                                Text(
-                                  language == 'tr' ? 'Gölge' : 'Shadow',
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 12),
                                 ),
                               ],
                             ),
 
-                            // Text background toggle
-                            Column(
+                            // Text formatting buttons with new options
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
                                 IconButton(
                                   icon: Icon(
-                                    Icons.format_color_fill,
-                                    color: _hasTextBackground
-                                        ? primaryColor
-                                        : Colors.white,
+                                    Icons.format_bold,
+                                    color:
+                                        _isBold ? primaryColor : Colors.white,
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      _hasTextBackground = !_hasTextBackground;
+                                      _isBold = !_isBold;
                                     });
                                   },
                                 ),
-                                Text(
-                                  language == 'tr' ? 'Arkaplan' : 'Background',
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 12),
-                                ),
-                              ],
-                            ),
-
-                            // Rotation control
-                            Column(
-                              children: [
                                 IconButton(
-                                  icon: const Icon(
-                                    Icons.rotate_right,
+                                  icon: Icon(
+                                    Icons.format_italic,
+                                    color:
+                                        _isItalic ? primaryColor : Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isItalic = !_isItalic;
+                                    });
+                                  },
+                                ),
+                                // Text alignment button
+                                IconButton(
+                                  icon: Icon(
+                                    _textAlignment == TextAlign.left
+                                        ? Icons.format_align_left
+                                        : _textAlignment == TextAlign.center
+                                            ? Icons.format_align_center
+                                            : Icons.format_align_right,
                                     color: Colors.white,
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      _textRotation =
-                                          (_textRotation + 15) % 360;
+                                      if (_textAlignment == TextAlign.left) {
+                                        _textAlignment = TextAlign.center;
+                                      } else if (_textAlignment ==
+                                          TextAlign.center) {
+                                        _textAlignment = TextAlign.right;
+                                      } else {
+                                        _textAlignment = TextAlign.left;
+                                      }
                                     });
                                   },
                                 ),
-                                Text(
-                                  language == 'tr' ? 'Döndür' : 'Rotate',
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-
-                        // Shadow and background color options
-                        if (_hasTextShadow || _hasTextBackground)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16.0),
-                            child: Row(
-                              children: [
-                                Text(
-                                  _hasTextShadow
-                                      ? (language == 'tr'
-                                          ? 'Gölge Rengi:'
-                                          : 'Shadow Color:')
-                                      : (language == 'tr'
-                                          ? 'Arkaplan Rengi:'
-                                          : 'Background Color:'),
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 30,
-                                    child: ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: _colorPalette.length,
-                                      itemBuilder: (context, index) {
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              if (_hasTextShadow) {
-                                                _shadowColor =
-                                                    _colorPalette[index];
-                                              } else {
-                                                _textBackgroundColor =
-                                                    _colorPalette[index]
-                                                        .withOpacity(0.5);
-                                              }
-                                            });
-                                          },
-                                          child: Container(
-                                            margin: const EdgeInsets.symmetric(
-                                                horizontal: 4),
-                                            width: 24,
-                                            height: 24,
-                                            decoration: BoxDecoration(
-                                              color: _colorPalette[index],
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: (_hasTextShadow &&
-                                                            _shadowColor ==
-                                                                _colorPalette[
-                                                                    index]) ||
-                                                        (!_hasTextShadow &&
-                                                            _textBackgroundColor
-                                                                    .withOpacity(
-                                                                        1.0) ==
-                                                                _colorPalette[
-                                                                    index])
-                                                    ? primaryColor
-                                                    : Colors.white,
-                                                width: 1,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _inputText = _textController.text;
+                                      _isTextMode = false;
+                                      // Center the text initially
+                                      _textX =
+                                          MediaQuery.of(context).size.width /
+                                                  2 -
+                                              50;
+                                      _textY =
+                                          MediaQuery.of(context).size.height /
+                                              4;
+                                    });
+                                  },
+                                  child: Text(
+                                    language == 'tr' ? 'Uygula' : 'Apply',
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                      ],
+
+                            // Color palette
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              height: 40,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _colorPalette.length,
+                                itemBuilder: (context, index) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _textColor = _colorPalette[index];
+                                      });
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: _colorPalette[index],
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color:
+                                              _textColor == _colorPalette[index]
+                                                  ? primaryColor
+                                                  : Colors.white,
+                                          width:
+                                              _textColor == _colorPalette[index]
+                                                  ? 2
+                                                  : 1,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+
+                            // New advanced text formatting options
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                // Text shadow toggle
+                                Column(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.blur_on,
+                                        color: _hasTextShadow
+                                            ? primaryColor
+                                            : Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _hasTextShadow = !_hasTextShadow;
+                                        });
+                                      },
+                                    ),
+                                    Text(
+                                      language == 'tr' ? 'Gölge' : 'Shadow',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+
+                                // Text background toggle
+                                Column(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.format_color_fill,
+                                        color: _hasTextBackground
+                                            ? primaryColor
+                                            : Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _hasTextBackground =
+                                              !_hasTextBackground;
+                                        });
+                                      },
+                                    ),
+                                    Text(
+                                      language == 'tr'
+                                          ? 'Arkaplan'
+                                          : 'Background',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+
+                                // Rotation control
+                                Column(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.rotate_right,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _textRotation =
+                                              (_textRotation + 15) % 360;
+                                        });
+                                      },
+                                    ),
+                                    Text(
+                                      language == 'tr' ? 'Döndür' : 'Rotate',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+
+                            // Shadow and background color options
+                            if (_hasTextShadow || _hasTextBackground)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16.0),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      _hasTextShadow
+                                          ? (language == 'tr'
+                                              ? 'Gölge Rengi:'
+                                              : 'Shadow Color:')
+                                          : (language == 'tr'
+                                              ? 'Arkaplan Rengi:'
+                                              : 'Background Color:'),
+                                      style:
+                                          const TextStyle(color: Colors.white),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 30,
+                                        child: ListView.builder(
+                                          scrollDirection: Axis.horizontal,
+                                          itemCount: _colorPalette.length,
+                                          itemBuilder: (context, index) {
+                                            return GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  if (_hasTextShadow) {
+                                                    _shadowColor =
+                                                        _colorPalette[index];
+                                                  } else {
+                                                    _textBackgroundColor =
+                                                        _colorPalette[index]
+                                                            .withOpacity(0.5);
+                                                  }
+                                                });
+                                              },
+                                              child: Container(
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 4),
+                                                width: 24,
+                                                height: 24,
+                                                decoration: BoxDecoration(
+                                                  color: _colorPalette[index],
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: (_hasTextShadow &&
+                                                                _shadowColor ==
+                                                                    _colorPalette[
+                                                                        index]) ||
+                                                            (!_hasTextShadow &&
+                                                                _textBackgroundColor
+                                                                        .withOpacity(
+                                                                            1.0) ==
+                                                                    _colorPalette[
+                                                                        index])
+                                                        ? primaryColor
+                                                        : Colors.white,
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
 
-                // Loading indicator
+                // Hashtag and mention interface
+                if (_showHashtagMention)
+                  GestureDetector(
+                    onTap: () {
+                      // Close the hashtag menu when tapping outside
+                      setState(() {
+                        _showHashtagMention = false;
+                      });
+                    },
+                    child: Container(
+                      color: Colors.black.withOpacity(0.7),
+                      padding: const EdgeInsets.all(16.0),
+                      child: GestureDetector(
+                        // Prevent taps inside from closing
+                        onTap: () {},
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _hashtagController,
+                                    style: TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      hintText: language == 'tr'
+                                          ? 'Etiket veya @kullanıcı ekle'
+                                          : 'Add hashtag or @mention',
+                                      hintStyle:
+                                          TextStyle(color: Colors.white70),
+                                      prefixText: _hashtagController.text
+                                              .startsWith('@')
+                                          ? ''
+                                          : '#',
+                                      prefixStyle:
+                                          TextStyle(color: Colors.white),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide:
+                                            BorderSide(color: Colors.grey),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide:
+                                            BorderSide(color: Colors.grey),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide:
+                                            BorderSide(color: primaryColor),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.add, color: primaryColor),
+                                  onPressed: () {
+                                    setState(() {
+                                      String text =
+                                          _hashtagController.text.trim();
+                                      if (text.isNotEmpty) {
+                                        if (text.startsWith('@')) {
+                                          _mentions.add(text.substring(1));
+                                        } else if (text.startsWith('#')) {
+                                          _hashtags.add(text.substring(1));
+                                        } else {
+                                          _hashtags.add(text);
+                                        }
+                                        _hashtagController.clear();
+                                      }
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              language == 'tr'
+                                  ? 'Etiketler ve Kullanıcılar'
+                                  : 'Hashtags and Mentions',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Wrap(
+                                    spacing: 8,
+                                    children: _hashtags
+                                        .map((tag) => Chip(
+                                              backgroundColor:
+                                                  primaryColor.withOpacity(0.3),
+                                              label: Text('#$tag',
+                                                  style: TextStyle(
+                                                      color: Colors.white)),
+                                              deleteIcon: Icon(Icons.close,
+                                                  size: 18,
+                                                  color: Colors.white),
+                                              onDeleted: () {
+                                                setState(() {
+                                                  _hashtags.remove(tag);
+                                                });
+                                              },
+                                            ))
+                                        .toList(),
+                                  ),
+                                  Wrap(
+                                    spacing: 8,
+                                    children: _mentions
+                                        .map((mention) => Chip(
+                                              backgroundColor:
+                                                  Colors.blue.withOpacity(0.3),
+                                              label: Text('@$mention',
+                                                  style: TextStyle(
+                                                      color: Colors.white)),
+                                              deleteIcon: Icon(Icons.close,
+                                                  size: 18,
+                                                  color: Colors.white),
+                                              onDeleted: () {
+                                                setState(() {
+                                                  _mentions.remove(mention);
+                                                });
+                                              },
+                                            ))
+                                        .toList(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Loading indicator with progress
                 if (_isUploading)
                   Container(
                     color: Colors.black.withOpacity(0.7),
@@ -655,7 +997,26 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          CircularProgressIndicator(color: primaryColor),
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                value: _uploadProgress > 0
+                                    ? _uploadProgress
+                                    : null,
+                                color: primaryColor,
+                              ),
+                              if (_uploadProgress > 0)
+                                Text(
+                                  '${(_uploadProgress * 100).toInt()}%',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             language == 'tr' ? 'Yükleniyor...' : 'Uploading...',
@@ -670,7 +1031,7 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
           ),
 
           // Bottom filters
-          if (!_isTextMode)
+          if (!_isTextMode && !_showHashtagMention)
             Container(
               height: 100,
               color: Colors.black,
@@ -736,11 +1097,131 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
     );
   }
 
+  // Method to show quality settings dialog
+  void _showQualitySettings(
+      BuildContext context, Color primaryColor, String language) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black,
+      isDismissible: true, // Allow dismissal by tapping outside
+      enableDrag: true, // Allow dragging to dismiss
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    language == 'tr' ? 'Ayarlar' : 'Settings',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Watermark settings
+                  SwitchListTile(
+                    title: Text(
+                      language == 'tr' ? 'Filigran Göster' : 'Show Watermark',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    value: _showWatermark,
+                    activeColor: primaryColor,
+                    onChanged: (value) {
+                      setModalState(() {
+                        setState(() {
+                          _showWatermark = value;
+                        });
+                      });
+                    },
+                  ),
+
+                  if (_showWatermark)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: TextField(
+                        style: TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: language == 'tr'
+                              ? 'Filigran metni'
+                              : 'Watermark text',
+                          hintStyle: TextStyle(color: Colors.white54),
+                        ),
+                        onChanged: (value) {
+                          setModalState(() {
+                            setState(() {
+                              _watermarkText = value;
+                            });
+                          });
+                        },
+                        controller: TextEditingController(text: _watermarkText),
+                      ),
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // Image quality slider
+                  Text(
+                    language == 'tr'
+                        ? 'Resim Kalitesi: $_imageQuality%'
+                        : 'Image Quality: $_imageQuality%',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  Slider(
+                    value: _imageQuality.toDouble(),
+                    min: 30,
+                    max: 100,
+                    divisions: 7,
+                    activeColor: primaryColor,
+                    inactiveColor: Colors.grey,
+                    onChanged: (value) {
+                      setModalState(() {
+                        setState(() {
+                          _imageQuality = value.round();
+                        });
+                      });
+                    },
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          language == 'tr' ? 'Düşük' : 'Low',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        Text(
+                          language == 'tr' ? 'Yüksek' : 'High',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _captureAndUpload() async {
     if (_isUploading) return;
 
     setState(() {
       _isUploading = true;
+      _uploadProgress = 0.0;
     });
 
     try {
@@ -764,6 +1245,22 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
       // Save the PNG with transparency preserved
       await tempFile.writeAsBytes(pngBytes);
 
+      // Compress the image if needed (based on quality setting)
+      if (_imageQuality < 100) {
+        final img.Image? originalImage = img.decodeImage(pngBytes);
+        if (originalImage != null) {
+          final img.Image compressedImage = img.copyResize(
+            originalImage,
+            width: (originalImage.width * (_imageQuality / 100)).round(),
+            height: (originalImage.height * (_imageQuality / 100)).round(),
+            interpolation: img.Interpolation.average,
+          );
+
+          final compressedBytes = img.encodePng(compressedImage, level: 6);
+          await tempFile.writeAsBytes(compressedBytes);
+        }
+      }
+
       // Upload to Firebase Storage
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -780,15 +1277,26 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
       // Set metadata to preserve transparency with PNG format
       final SettableMetadata metadata = SettableMetadata(
         contentType: 'image/png',
-        customMetadata: {'edited': 'true'},
+        customMetadata: {
+          'edited': 'true',
+          'quality': _imageQuality.toString(),
+          'hasWatermark': _showWatermark.toString(),
+          'hasHashtags': _hashtags.isNotEmpty.toString(),
+          'hasMentions': _mentions.isNotEmpty.toString(),
+        },
       );
 
-      // Upload the file
+      // Upload the file with progress tracking
       final UploadTask uploadTask = storageRef.putFile(tempFile, metadata);
 
-      // Handle potential errors
+      // Track upload progress
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        if (snapshot.state == TaskState.error) {
+        if (snapshot.state == TaskState.running) {
+          final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+          setState(() {
+            _uploadProgress = progress;
+          });
+        } else if (snapshot.state == TaskState.error) {
           if (mounted) {
             setState(() {
               _isUploading = false;
@@ -818,7 +1326,7 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
       final TaskSnapshot taskSnapshot = await uploadTask;
       final String downloadUrl = await taskSnapshot.ref.getDownloadURL();
 
-      // Create story document in Firestore
+      // Create story document in Firestore with hashtags and mentions
       final now = Timestamp.now();
       final expiresAt =
           Timestamp.fromDate(DateTime.now().add(const Duration(hours: 24)));
@@ -833,6 +1341,8 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
         'expiresAt': expiresAt,
         'viewedBy': [],
         'likedBy': [],
+        'hashtags': _hashtags,
+        'mentions': _mentions,
       });
 
       // Delete the temporary file
