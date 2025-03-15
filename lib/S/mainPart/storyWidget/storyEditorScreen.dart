@@ -191,10 +191,52 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
     Colors.pink,
   ];
 
+  // Drawing feature
+  bool _isDrawingMode = false;
+  List<DrawingStroke> _strokes = [];
+  List<Offset> _currentStroke = [];
+  Color _drawingColor = Colors.white;
+  double _brushSize = 5.0;
+
+  // Stickers feature
+  bool _showStickerPicker = false;
+  List<StickerItem> _stickers = [];
+  double _initialScale = 1.0;
+  double _initialRotation = 0.0;
+
+  // Common emoji sets for stickers
+  final List<String> _popularEmojis = [
+    '😂',
+    '❤️',
+    '😍',
+    '🔥',
+    '👍',
+    '✨',
+    '🎉',
+    '🥰',
+    '😊',
+    '🤔',
+    '😭',
+    '🙌',
+    '💯',
+    '🤩',
+    '😎',
+    '👏',
+  ];
+
   @override
   void initState() {
     super.initState();
     selectedFilter = filters[0]; // Start with normal filter
+
+    // Initialize text position to center of screen (modified to be more precise)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final size = MediaQuery.of(context).size;
+      setState(() {
+        _textX = size.width / 2 - 100;
+        _textY = size.height / 3;
+      });
+    });
 
     // Set default watermark to username if available
     final user = FirebaseAuth.instance.currentUser;
@@ -208,6 +250,30 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
     _textController.dispose();
     _hashtagController.dispose();
     super.dispose();
+  }
+
+  // Fixed the text mode toggling to properly handle text input
+  void _toggleTextMode() {
+    setState(() {
+      _isTextMode = !_isTextMode;
+      _showHashtagMention = false;
+
+      if (_isTextMode) {
+        // When entering text mode, initialize controller with existing text
+        _textController.text = _inputText;
+      } else {
+        // When exiting text mode, save the input
+        if (_textController.text.isNotEmpty) {
+          _inputText = _textController.text;
+
+          // Position the text in a good spot if it's newly added
+          if (_textX == 0 && _textY == 0) {
+            _textX = MediaQuery.of(context).size.width / 2 - 100;
+            _textY = MediaQuery.of(context).size.height / 3;
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -229,22 +295,13 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
-          // Text button
+          // Text button with fixed functionality
           IconButton(
             icon: Icon(
               Icons.text_fields,
               color: _isTextMode ? primaryColor : Colors.white,
             ),
-            onPressed: () {
-              setState(() {
-                _isTextMode = !_isTextMode;
-                _showHashtagMention = false;
-                if (!_isTextMode) {
-                  _inputText = _textController.text;
-                  _textController.clear();
-                }
-              });
-            },
+            onPressed: _toggleTextMode, // Use the improved method
           ),
           // New feature: Show hashtag menu
           IconButton(
@@ -513,15 +570,12 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
                   ),
                 ),
 
-                // Text input overlay with new options
+                // Improved text input overlay (Keep only this one version)
                 if (_isTextMode)
                   GestureDetector(
                     onTap: () {
                       // Close the text input when tapping outside
-                      setState(() {
-                        _inputText = _textController.text;
-                        _isTextMode = false;
-                      });
+                      _toggleTextMode();
                     },
                     child: Container(
                       color: Colors.black.withOpacity(0.7),
@@ -546,6 +600,7 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
                               ),
                               textAlign: _textAlignment,
                               maxLines: 3,
+                              autofocus: true,
                               decoration: InputDecoration(
                                 hintText: language == 'tr'
                                     ? 'Metin girin...'
@@ -1026,6 +1081,377 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
                       ),
                     ),
                   ),
+
+                // Extended Features Bar (new)
+                if (!_isTextMode && !_showHashtagMention && !_isUploading)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Column(
+                      children: [
+                        // Drawing tool
+                        CircleAvatar(
+                          backgroundColor:
+                              _isDrawingMode ? primaryColor : Colors.black54,
+                          radius: 24,
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.brush,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isDrawingMode = !_isDrawingMode;
+                                if (_isDrawingMode) {
+                                  _showStickerPicker = false;
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Stickers/Emoji button
+                        CircleAvatar(
+                          backgroundColor: _showStickerPicker
+                              ? primaryColor
+                              : Colors.black54,
+                          radius: 24,
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.emoji_emotions,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _showStickerPicker = !_showStickerPicker;
+                                if (_showStickerPicker) {
+                                  _isDrawingMode = false;
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Completely reworked drawing functionality
+                if (_isDrawingMode)
+                  Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Drawing area with improved event handling
+                      GestureDetector(
+                        // Using GestureDetector instead of Listener for better control
+                        onPanStart: (details) {
+                          setState(() {
+                            RenderBox renderBox =
+                                context.findRenderObject() as RenderBox;
+                            Offset localPosition =
+                                renderBox.globalToLocal(details.globalPosition);
+                            _currentStroke = [localPosition];
+                          });
+                        },
+                        onPanUpdate: (details) {
+                          setState(() {
+                            RenderBox renderBox =
+                                context.findRenderObject() as RenderBox;
+                            Offset localPosition =
+                                renderBox.globalToLocal(details.globalPosition);
+                            _currentStroke.add(localPosition);
+                          });
+                        },
+                        onPanEnd: (details) {
+                          if (_currentStroke.length > 1) {
+                            setState(() {
+                              _strokes.add(
+                                DrawingStroke(
+                                  points: List.from(_currentStroke),
+                                  color: _drawingColor,
+                                  width: _brushSize,
+                                ),
+                              );
+                              _currentStroke = [];
+                            });
+                          }
+                        },
+                        child: Container(
+                          color: Colors
+                              .transparent, // Transparent container to capture all touches
+                          child: CustomPaint(
+                            painter: DrawingPainter(
+                              strokes: _strokes,
+                              currentStroke: _currentStroke,
+                              currentColor: _drawingColor,
+                              currentWidth: _brushSize,
+                            ),
+                            size: Size.infinite,
+                          ),
+                        ),
+                      ),
+
+                      // Drawing tools panel - remain at the same location
+                      Positioned(
+                        bottom: 110,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          color: Colors.black54,
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Brush size slider
+                              Row(
+                                children: [
+                                  const Icon(Icons.line_weight,
+                                      color: Colors.white, size: 18),
+                                  Expanded(
+                                    child: Slider(
+                                      value: _brushSize,
+                                      min: 1.0,
+                                      max: 20.0,
+                                      activeColor: _drawingColor,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _brushSize = value;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // Color palette and tools - wrap in SingleChildScrollView to handle overflow
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    // Undo button
+                                    IconButton(
+                                      icon: const Icon(Icons.undo,
+                                          color: Colors.white),
+                                      onPressed: _strokes.isNotEmpty
+                                          ? () {
+                                              setState(() {
+                                                _strokes.removeLast();
+                                              });
+                                            }
+                                          : null,
+                                      constraints: BoxConstraints.tightFor(
+                                          width: 40, height: 40),
+                                      padding: EdgeInsets.zero,
+                                    ),
+
+                                    // Color selectors
+                                    for (Color color in [
+                                      Colors.white,
+                                      Colors.black,
+                                      Colors.red,
+                                      Colors.green,
+                                      Colors.blue,
+                                      Colors.yellow
+                                    ])
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 4),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _drawingColor = color;
+                                            });
+                                          },
+                                          child: Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: color,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: _drawingColor == color
+                                                    ? primaryColor
+                                                    : Colors.white,
+                                                width: _drawingColor == color
+                                                    ? 2
+                                                    : 1,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                    // Clear all button
+                                    IconButton(
+                                      icon: const Icon(Icons.clear_all,
+                                          color: Colors.white),
+                                      onPressed: _strokes.isNotEmpty
+                                          ? () {
+                                              setState(() {
+                                                _strokes = [];
+                                              });
+                                            }
+                                          : null,
+                                      constraints: BoxConstraints.tightFor(
+                                          width: 40, height: 40),
+                                      padding: EdgeInsets.zero,
+                                    ),
+
+                                    // Done button
+                                    IconButton(
+                                      icon: Icon(Icons.check,
+                                          color: primaryColor),
+                                      onPressed: () {
+                                        setState(() {
+                                          _isDrawingMode = false;
+                                        });
+                                      },
+                                      constraints: BoxConstraints.tightFor(
+                                          width: 40, height: 40),
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                // Sticker Picker Panel
+                if (_showStickerPicker)
+                  Container(
+                    color: Colors.black.withOpacity(0.85),
+                    child: Column(
+                      children: [
+                        // Header
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Text(
+                                language == 'tr' ? 'Çıkartmalar' : 'Stickers',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white),
+                                onPressed: () {
+                                  setState(() {
+                                    _showStickerPicker = false;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Stickers grid
+                        Expanded(
+                          child: GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              childAspectRatio: 1,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                            itemCount: _popularEmojis.length,
+                            itemBuilder: (context, index) {
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _stickers.add(
+                                      StickerItem(
+                                        content: _popularEmojis[index],
+                                        x: MediaQuery.of(context).size.width /
+                                                2 -
+                                            30,
+                                        y: MediaQuery.of(context).size.height /
+                                            3,
+                                        scale: 1.0,
+                                        rotation: 0.0,
+                                      ),
+                                    );
+                                    _showStickerPicker = false;
+                                  });
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white10,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _popularEmojis[index],
+                                      style: const TextStyle(fontSize: 32),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Render all placed stickers
+                ..._stickers.map((sticker) => Positioned(
+                      left: sticker.x,
+                      top: sticker.y,
+                      child: GestureDetector(
+                        onScaleStart: (details) {
+                          // Store initial values for this specific sticker
+                          _initialScale = sticker.scale;
+                          _initialRotation = sticker.rotation;
+                        },
+                        onScaleUpdate: (details) {
+                          setState(() {
+                            // Get index safely with a null check
+                            final index = _stickers.indexOf(sticker);
+
+                            // Only update if the sticker still exists in the list
+                            if (index >= 0 && index < _stickers.length) {
+                              _stickers[index] = StickerItem(
+                                content: sticker.content,
+                                x: sticker.x + details.focalPointDelta.dx,
+                                y: sticker.y + details.focalPointDelta.dy,
+                                scale: _initialScale * details.scale,
+                                rotation: _initialRotation + details.rotation,
+                              );
+                            }
+                          });
+                        },
+                        onLongPress: () {
+                          setState(() {
+                            _stickers.remove(sticker);
+                          });
+                        },
+                        child: Transform.scale(
+                          scale: sticker.scale,
+                          child: Transform.rotate(
+                            angle: sticker.rotation,
+                            child: Text(
+                              sticker.content,
+                              style: const TextStyle(fontSize: 50),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )),
+
+                // ...existing code...
               ],
             ),
           ),
@@ -1343,6 +1769,8 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
         'likedBy': [],
         'hashtags': _hashtags,
         'mentions': _mentions,
+        'hasDrawing': _strokes.isNotEmpty,
+        'hasStickers': _stickers.isNotEmpty,
       });
 
       // Delete the temporary file
@@ -1373,6 +1801,110 @@ class _StoryEditorScreenState extends ConsumerState<StoryEditorScreen> {
       }
     }
   }
+}
+
+// Supporting classes for new features
+
+class DrawingStroke {
+  final List<Offset> points;
+  final Color color;
+  final double width;
+
+  DrawingStroke({
+    required this.points,
+    required this.color,
+    required this.width,
+  });
+}
+
+class DrawingPainter extends CustomPainter {
+  final List<DrawingStroke> strokes;
+  final List<Offset> currentStroke;
+  final Color currentColor;
+  final double currentWidth;
+
+  DrawingPainter({
+    required this.strokes,
+    required this.currentStroke,
+    required this.currentColor,
+    required this.currentWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Improved drawing path construction for better performance and quality
+
+    // Function to draw a single stroke
+    void drawStroke(List<Offset> points, Color color, double width) {
+      if (points.isEmpty) return;
+
+      final paint = Paint()
+        ..color = color
+        ..strokeWidth = width
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..style = PaintingStyle.stroke;
+
+      if (points.length == 1) {
+        // For a single point, draw a circle to make it visible
+        canvas.drawCircle(points.first, width / 2, paint);
+      } else {
+        // For a stroke with multiple points, create a smooth path
+        final path = Path();
+
+        // Start at the first point
+        path.moveTo(points.first.dx, points.first.dy);
+
+        // Use quadratic bezier curves for smoother lines between points
+        for (int i = 0; i < points.length - 1; i++) {
+          final p0 = points[i];
+          final p1 = points[i + 1];
+
+          // Simple direct line for now (more reliable)
+          path.lineTo(p1.dx, p1.dy);
+
+          // Alternatively, for smoother curves (but can be less reliable):
+          // final midPoint = Offset((p0.dx + p1.dx) / 2, (p0.dy + p1.dy) / 2);
+          // path.quadraticBezierTo(p0.dx, p0.dy, midPoint.dx, midPoint.dy);
+        }
+
+        canvas.drawPath(path, paint);
+      }
+    }
+
+    // Draw all completed strokes
+    for (final stroke in strokes) {
+      drawStroke(stroke.points, stroke.color, stroke.width);
+    }
+
+    // Draw the current stroke being drawn
+    drawStroke(currentStroke, currentColor, currentWidth);
+  }
+
+  @override
+  bool shouldRepaint(covariant DrawingPainter oldDelegate) {
+    return oldDelegate.strokes != strokes ||
+        oldDelegate.currentStroke != currentStroke ||
+        oldDelegate.currentColor != currentColor ||
+        oldDelegate.currentWidth != currentWidth;
+  }
+}
+
+class StickerItem {
+  final String content;
+  final double x;
+  final double y;
+  final double scale;
+  final double rotation;
+
+  // Simplify by removing unnecessary fields that were causing problems
+  StickerItem({
+    required this.content,
+    required this.x,
+    required this.y,
+    required this.scale,
+    required this.rotation,
+  });
 }
 
 class FilterOption {
